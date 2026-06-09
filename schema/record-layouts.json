@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "validated_against": "D:\\Projects\\leasehold-bridge\\lhmirror",
+  "format": "leasehold_fixed_width",
+  "encrypted": false,
+  "engine": "native_flat_files_not_btrieve",
+  "files": {
+    "PROPA.BAK": {
+      "role": "property_directory",
+      "encoding": "ascii",
+      "record_style": "variable_text_blocks",
+      "contains": ["legal_name", "address", "leasehold_building_code", "leasehold_ra_group"]
+    },
+    "RA####.DAT": {
+      "role": "unit_tenant_master",
+      "record_bytes": 133,
+      "segments_per_unit": 19,
+      "contains": [
+        "unit_label",
+        "phones",
+        "lease_start",
+        "lease_end",
+        "rent_components",
+        "balance_or_total_due",
+        "tenant_name",
+        "tenant_address"
+      ]
+    },
+    "RA####H.Dat": {
+      "role": "posted_transaction_stream",
+      "record_bytes": 105,
+      "contains": [
+        "unit_label",
+        "date",
+        "balance_before",
+        "description",
+        "amount",
+        "balance_after"
+      ],
+      "notes": "Primary source for payments, charges, running balance"
+    },
+    "RA####R.Dat": {
+      "role": "rent_payment_ledger",
+      "record_bytes": 171,
+      "contains": ["unit_label", "date", "CK", "amount", "VACANT"],
+      "optional": true
+    },
+    "RA####C.Dat": {
+      "role": "charges_posted",
+      "record_bytes": null,
+      "optional": true
+    },
+    "RA####Q.Dat": {
+      "role": "monthly_billing_snapshot",
+      "optional": true
+    },
+    "RA####DZ.Dat": {
+      "role": "monthly_balance_snapshot",
+      "optional": true
+    },
+    "RA####P.Y##": {
+      "role": "year_payment_summary",
+      "year_suffix": "Y## = 20##",
+      "optional": true,
+      "binary_numeric_tail": true
+    },
+    "RA####M.Y##": {
+      "role": "year_category_totals",
+      "optional": true,
+      "binary_numeric_tail": true
+    },
+    "A{code}TR.DAT": {
+      "role": "property_transaction_detail",
+      "import_tier": "defer_gl"
+    },
+    "A{code}EX.DAT": {
+      "role": "property_expenses",
+      "import_tier": "defer_gl"
+    },
+    "A{code}GL.Y##": {
+      "role": "property_general_ledger_year",
+      "import_tier": "defer_gl"
+    }
+  },
+  "suffix_legend": {
+    "H": "history / posted transaction stream",
+    "R": "rent payment ledger",
+    "C": "charges",
+    "Q": "monthly billing",
+    "DZ": "monthly balance",
+    "P": "year payment rollup (.Y##)",
+    "M": "year category rollup (.Y##)",
+    "VA": "vendor account lines on rent account",
+    "RN": "rent notice",
+    "OC": "occupancy",
+    "TX": "tax",
+    "TR": "transactions (A-prefix property accounting)",
+    "EX": "expenses (A-prefix)",
+    "GL": "general ledger year file",
+    "BT": "batch stub (tiny)",
+    "DS": "dataset stub (tiny)"
+  }
+}

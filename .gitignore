@@ -1,0 +1,13 @@
+# Leasehold mirror — do not commit tenant PII
+lhmirror/
+**/lhmirror/
+
+# Export output with tenant PII
+output/
+
+node_modules/
+.env
+.env.local
+
+# Other mirror paths (use leasehold-bridge/lhmirror only for this project)
+# OneDrive/Documents/lhmirror

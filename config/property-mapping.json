@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "mirror_root": "D:\\Projects\\leasehold-bridge\\lhmirror",
+  "source_system": "leasehold",
+  "propera_property_codes_uppercase": true,
+  "properties": [
+    {
+      "leasehold_ra_group": "RA0001",
+      "leasehold_building_code": "318WG",
+      "leasehold_accounting_prefix": "A318WG",
+      "display_name": "318 West Grand",
+      "address_hint": "318 WEST GRAND STREET, ELIZABETH NJ",
+      "aliases": ["318 WGRAND", "WEST GRAND", "GRAND REAL ESTATE HOLDINGS LLC"],
+      "propera_property_code": "WESTGRAND",
+      "import_enabled": true,
+      "notes": "User: westgrand"
+    },
+    {
+      "leasehold_ra_group": "RA0003",
+      "leasehold_building_code": "WESTF",
+      "leasehold_accounting_prefix": "AWESTF",
+      "display_name": "Engel Gardens / 618-630 Westfield",
+      "address_hint": "618-630 WESTFIELD AVENUE, ELIZABETH NJ",
+      "aliases": ["ENGEL GARDENS", "618-630", "AROMA"],
+      "propera_property_code": "WESTFIELD",
+      "import_enabled": true,
+      "notes": "User: 618-630 or aroma, Engel Gardens → westfield"
+    },
+    {
+      "leasehold_ra_group": "RA0005",
+      "leasehold_building_code": "MURRA",
+      "leasehold_accounting_prefix": "AMURRA",
+      "display_name": "57-77 Murray",
+      "address_hint": "57-77 MURRAY STREET, ELIZABETH NJ",
+      "aliases": ["THE GRAND AT MURRAY ST LLC", "57-77 MURR"],
+      "propera_property_code": "MURRAY",
+      "import_enabled": true,
+      "notes": "User: 57-77 murray → murray"
+    },
+    {
+      "leasehold_ra_group": "RA0007",
+      "leasehold_building_code": "540",
+      "leasehold_accounting_prefix": "A540",
+      "display_name": "540 Morris",
+      "address_hint": "540 MORRIS AVE, ELIZABETH NJ",
+      "aliases": ["THE GRAND AT MORRIS", "540 MORRIS"],
+      "propera_property_code": "MORRIS",
+      "import_enabled": true,
+      "notes": "User: 540 morris → morris"
+    },
+    {
+      "leasehold_ra_group": "RA0006",
+      "leasehold_building_code": "705",
+      "leasehold_accounting_prefix": "A705",
+      "display_name": "702 Penn (Grand at Penn)",
+      "address_hint": "702 PENNSYLVANIA AVENUE, ELIZABETH NJ",
+      "aliases": [
+        "702 PENN",
+        "702 Pennsylvania",
+        "THE GRAND AT PENN LLC",
+        "705"
+      ],
+      "propera_property_code": "PENN",
+      "propera_display_name": "Penn",
+      "import_enabled": true,
+      "notes": "Same physical property. Leasehold PROPA uses building code 705 and RA0006; Propera names/codes it 702 Penn (Penn family — not Newark). Do not map to 705 Newark."
+    },
+    {
+      "leasehold_ra_group": "RA0008",
+      "leasehold_building_code": "354",
+      "leasehold_accounting_prefix": "A354",
+      "display_name": "354 Union (Grand at River)",
+      "address_hint": "354 UNION AVE, ELIZABETH NJ",
+      "aliases": ["UNION", "THE GRAND AT RIVER LLC"],
+      "propera_property_code": null,
+      "import_enabled": false,
+      "notes": "User: union — property being built, not yet on Propera"
+    },
+    {
+      "leasehold_ra_group": "RA0009",
+      "leasehold_building_code": "673",
+      "leasehold_accounting_prefix": "A673",
+      "display_name": "707 Pennsylvania (Grand at Penn North)",
+      "address_hint": "707 PENNSYLVANIA AVE, ELIZABETH NJ",
+      "aliases": ["707 PENN", "THE GRAND AT PENN NORTH LLC"],
+      "propera_property_code": null,
+      "import_enabled": false,
+      "notes": "User: 707 penn — not yet on Propera"
+    },
+    {
+      "leasehold_ra_group": "RA0010",
+      "leasehold_building_code": "676",
+      "leasehold_accounting_prefix": "A676",
+      "display_name": "678 Pennsylvania (Grand at Penn South)",
+      "address_hint": "678 PENNSYLVANIA AVE, ELIZABETH NJ",
+      "aliases": ["678 PENN", "THE GRAND AT PENN SOUTH LLC"],
+      "propera_property_code": null,
+      "import_enabled": false,
+      "notes": "User: 678 penn — not yet on Propera"
+    }
+  ],
+  "secondary_ra_groups": [
+    {
+      "leasehold_ra_group": "RA5401",
+      "notes": "Morris-related auxiliary group (540); tie to RA0007 / A540 when parsing"
+    },
+    {
+      "leasehold_ra_group": "RA0002",
+      "notes": "Sparse file set in snapshot — confirm property in PROPA before import"
+    },
+    {
+      "leasehold_ra_group": "RA0004",
+      "notes": "Sparse file set in snapshot — confirm property in PROPA before import"
+    }
+  ]
+}

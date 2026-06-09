@@ -1,0 +1,5 @@
+{
+  "mirror_root": "D:\\Projects\\leasehold-bridge\\lhmirror",
+  "comment": "Single allowed dev snapshot. Production sync will use the same layout under \\\\lhdata\\lhmirror later.",
+  "snapshot_note": "Point LEASEHOLD_MIRROR_ROOT at mirror_root. Never read other lhmirror paths by default."
+}

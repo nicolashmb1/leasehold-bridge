@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "mirror_root": "D:\\Projects\\leasehold-bridge\\lhmirror",
+  "tiers": {
+    "bootstrap_once": {
+      "description": "Run on first import or when a new RA#### group is added to Propera",
+      "files": ["PROPA.BAK", "config/property-mapping.json"],
+      "actions": ["build RA#### to propera_property_code map", "validate unit labels against unit_catalog"]
+    },
+    "slow_changing": {
+      "description": "Daily or on file mtime change",
+      "files_per_property": ["RA####.DAT"],
+      "propera_targets": [
+        "rent_cents",
+        "lease_end",
+        "standing_balance_cents",
+        "tenant display fields"
+      ]
+    },
+    "fast_changing": {
+      "description": "Every 5-15 min in production; optional for snapshot dev",
+      "files_per_property": ["RA####H.Dat"],
+      "propera_targets": [
+        "last_payment_at",
+        "last_payment_cents",
+        "tenant_payment_history",
+        "delinquency_status"
+      ]
+    },
+    "periodic": {
+      "description": "Monthly or year-end reporting",
+      "files_per_property": ["RA####P.Y##", "RA####M.Y##", "A{code}GL.Y##"],
+      "propera_targets": ["portfolio YTD rollups"],
+      "optional_v1": true
+    },
+    "defer": {
+      "description": "Not needed for tenant balance v1",
+      "files": [
+        "A{code}TR.DAT",
+        "A{code}EX.DAT",
+        "VENDOR.BAK",
+        "BANK.BAK",
+        "NYSIAI.DAT",
+        "NYCRS.DAT"
+      ]
+    },
+    "ignore": {
+      "description": "Not accounting data",
+      "paths": ["2003/", "Group A/", "*.exe", "*.pdf"]
+    }
+  },
+  "import_enabled_filter": {
+    "field": "import_enabled",
+    "source": "config/property-mapping.json",
+    "v1_properties": ["WESTGRAND", "WESTFIELD", "MURRAY", "MORRIS", "PENN"]
+  }
+}
