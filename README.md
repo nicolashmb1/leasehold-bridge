@@ -91,7 +91,7 @@ npm run export -- --property WESTGRAND --format csv
 
 Output lands in `output/` (gitignored — contains tenant PII). CSV includes `*_dollars` columns for side-by-side comparison with the Leasehold screen; `*_cents` columns are the Propera import contract.
 
-**`last_payment_at`** is derived from `RA####H.Dat` posted payments. After parser changes, **re-export and re-import** so Propera snapshots pick up corrected dates (stale rows kept old dates when 3-digit check payments were missed). Display picks the latest **substantial** payment (≥ half of rent, min $500), not trailing partials.
+**`last_payment_at`** is derived from `RA####H.Dat` posted payments. After parser changes, **re-export and re-import** so Propera snapshots pick up corrected dates (stale rows kept old dates when 3-digit check payments were missed). Display picks the latest **meaningful** payment (≥ 20% of rent, min $500), not tiny trailing partials (e.g. $200).
 
 Each fact `payload.posted_transactions` carries the last **80** posted lines per unit from `RA####H.Dat` (billing, late fees, payments) for read-only display on the unit hub. Re-import after bridge updates to refresh ledger history and net-rent enrichment in Propera.
 

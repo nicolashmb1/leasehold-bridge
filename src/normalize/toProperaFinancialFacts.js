@@ -61,14 +61,17 @@ function leaseholdDateMs(raw) {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-/** Prefer latest substantial payment over trailing partials (e.g. $200 after $1300 rent). */
+/**
+ * Prefer latest meaningful payment over tiny trailing partials (e.g. $200 on $1300 rent).
+ * Uses 20% of rent (min $500) — so $1000 on ~$2406 rent counts; $200 still does not.
+ */
 export function pickDisplayLastPayment(recentPayments, rentDollars) {
   const payments = Array.isArray(recentPayments) ? recentPayments.filter((p) => p?.date) : [];
   if (!payments.length) return null;
 
   const threshold =
     rentDollars != null && Number.isFinite(rentDollars)
-      ? Math.max(rentDollars * 0.5, 500)
+      ? Math.max(rentDollars * 0.2, 500)
       : 500;
 
   const sorted = [...payments].sort(
