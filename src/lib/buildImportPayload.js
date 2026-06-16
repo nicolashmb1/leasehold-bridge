@@ -1,5 +1,7 @@
 /** Maps bridge export facts → Propera import API body (accounting-snapshots contract). */
 
+import { buildLeaseTermsSyncSignals } from "../signals/buildLeaseTermsSyncSignals.js";
+
 function optionalCents(value) {
   if (value == null || value === "") return null;
   const n = Number(value);
@@ -40,10 +42,17 @@ export function buildImportPayload(exportResult) {
   const syncedAt =
     String(facts[0]?.synced_at ?? "").trim() || new Date().toISOString();
 
+  const { signals } = buildLeaseTermsSyncSignals({
+    facts,
+    propertyCode,
+    syncedAt,
+  });
+
   return {
     source_system: "leasehold",
     propera_property_code: propertyCode,
     synced_at: syncedAt,
     facts: facts.map(mapFact),
+    signals,
   };
 }

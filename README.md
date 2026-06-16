@@ -19,6 +19,8 @@ Propera stays **channel-agnostic** and **source-agnostic**. What varies per clie
 
 **Guardrail:** The bridge must not assign responsibility, touch lifecycle, or write back to Leasehold. Read legacy → normalize → hand off to Propera DAL only.
 
+**Shipped:** Export includes **`signals[]`** with `lease_terms_sync` (lease terms intent) alongside snapshot **facts** — see **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`**. Ledger event signals (`payment_received`, etc.) are **Step 2**, not yet in bridge export.
+
 **Unit catalog rule (locked):** Leasehold `unit_label` is a **match key only** — used to find the right `unit_catalog_id` when posting financial snapshots. Propera `units` (label, floor, bedrooms, bathrooms, notes, layout) is **always operator truth**. The bridge must **never** create, rename, or overwrite unit catalog fields from Leasehold room numbers. If Propera has blanks, staff fill them in the portal — not from legacy import.
 
 ## Mirror path (mandatory)
