@@ -1,6 +1,8 @@
 /** Maps bridge export facts → Propera import API body (accounting-snapshots contract). */
 
 import { buildLeaseTermsSyncSignals } from "../signals/buildLeaseTermsSyncSignals.js";
+import { buildLedgerEventSignals } from "../signals/buildLedgerEventSignals.js";
+import { isLedgerMimicPilotUnit } from "../signals/ledgerMimicPilot.js";
 
 function optionalCents(value) {
   if (value == null || value === "") return null;
@@ -48,11 +50,18 @@ export function buildImportPayload(exportResult) {
     syncedAt,
   });
 
+  const ledgerBuilt = buildLedgerEventSignals({
+    facts,
+    propertyCode,
+    syncedAt,
+    isPilotUnit: isLedgerMimicPilotUnit,
+  });
+
   return {
     source_system: "leasehold",
     propera_property_code: propertyCode,
     synced_at: syncedAt,
     facts: facts.map(mapFact),
-    signals,
+    signals: [...signals, ...ledgerBuilt.signals],
   };
 }

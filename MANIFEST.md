@@ -193,11 +193,11 @@ Add file mtime/hash cursor per `RA####H.Dat` / `RA####.DAT` — no parser rewrit
 
 ## Next build steps
 
-1. Parser: `PROPA` + `RA0001.DAT` + `RA0001H.Dat` from `leasehold-bridge/lhmirror` only  
-2. Export CSV for WESTGRAND units (validate against Leasehold screen)  
-3. Migration 058 + Propera import route  
-4. Expand to WESTFIELD, MURRAY, MORRIS  
-5. Delta sync when on office LAN  
+1. **Ledger mimic pilot** — validate WESTFIELD unit **101** (`config/ledger-mimic-pilot.json`); expand to full WESTFIELD building when compare passes  
+2. Emit ledger signals for additional properties after WESTFIELD sign-off  
+3. Delta sync when on office LAN (existing `sync-changed` CLI)  
+
+*(Bootstrap export for all v1 properties is shipped — see README.)*
 
 ---
 
@@ -205,6 +205,7 @@ Add file mtime/hash cursor per `RA####H.Dat` / `RA####.DAT` — no parser rewrit
 
 | Date | Note |
 |------|------|
+| 2026-06-15 | Step 2 ledger mimic — `buildLedgerEventSignals.js`; pilot **WESTFIELD unit 101**; signals merged in `buildImportPayload.js` |
 | 2026-06-07 | Initial manifest; mirror locked to `D:\lhmirror`; four live Propera properties + three future (Union, 707 Penn, 678 Penn) |
 | 2026-06-07 | Home PC setup: mirror copied to `leasehold-bridge/lhmirror`; config paths updated |
 | 2026-06-08 | Deposit derivation (S.Dat/R.Dat); WESTFIELD 29/30 OXPS match; unit 314 Other $700 = mirror gap |
