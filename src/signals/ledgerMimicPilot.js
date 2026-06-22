@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = path.resolve(__dirname, "../config/ledger-mimic-pilot.json");
+const CONFIG_PATH = path.resolve(__dirname, "../../config/ledger-mimic-pilot.json");
 
 let cached = null;
 
@@ -32,7 +32,9 @@ export function isLedgerMimicPilotUnit(propertyCode, unitLabel) {
   if (!property || !unit) return false;
   const allowed = cfg.units_by_property?.[property];
   if (!Array.isArray(allowed) || !allowed.length) return false;
-  return allowed.map((u) => String(u).trim()).includes(unit);
+  const normalized = allowed.map((u) => String(u).trim());
+  if (normalized.includes("*")) return true;
+  return normalized.includes(unit);
 }
 
 export function resetLedgerMimicPilotConfigCache() {
