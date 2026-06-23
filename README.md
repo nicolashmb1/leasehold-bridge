@@ -19,6 +19,8 @@ Propera stays **channel-agnostic** and **source-agnostic**. What varies per clie
 
 **Guardrail:** The bridge must not assign responsibility, touch lifecycle, or write back to Leasehold. Read legacy → normalize → hand off to Propera DAL only.
 
+**Intent (locked):** [../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md](../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md) — baseline once, then emit **actions only** (staff-click model). Absent/null in export = **no intent**, not “clear in Propera.”
+
 **Shipped:** Export includes **`signals[]`** with `lease_terms_sync` (lease terms intent) alongside snapshot **facts** — see **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`**. Ledger event signals (`payment_received`, `monthly_billing`, …) ship for **pilot units** in `config/ledger-mimic-pilot.json` (default: **WESTFIELD unit 101**).
 
 **Unit catalog rule (locked):** Leasehold `unit_label` is a **match key only** — used to find the right `unit_catalog_id` when posting financial snapshots. Propera `units` (label, floor, bedrooms, bathrooms, notes, layout) is **always operator truth**. The bridge must **never** create, rename, or overwrite unit catalog fields from Leasehold room numbers. If Propera has blanks, staff fill them in the portal — not from legacy import.
