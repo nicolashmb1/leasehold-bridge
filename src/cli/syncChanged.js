@@ -50,15 +50,28 @@ Required env:
 
 Optional env:
   LEASEHOLD_MIRROR_SOURCE            robocopy source (default \\\\lhdata\\lhmirror)
-  LEASEHOLD_SYNC_CURSOR_PATH         cursor file (default <mirror>/.leasehold-sync-cursor.json)
+  LEASEHOLD_SYNC_CURSOR_PATH         cursor file (default <parent-of-mirror>/.leasehold-sync-cursor.json)
   PROPERA_APP_DIR                    path to propera-app for office-sync-mirror.ps1
 `);
+}
+
+function defaultCursorPath(mirrorRoot) {
+  // Keep outside LEASEHOLD_MIRROR_ROOT — robocopy /MIR purges extras in staging.
+  return path.resolve(mirrorRoot, "..", ".leasehold-sync-cursor.json");
 }
 
 function resolveCursorPath(mirrorRoot) {
   const fromEnv = String(process.env.LEASEHOLD_SYNC_CURSOR_PATH || "").trim();
   if (fromEnv) return path.resolve(fromEnv);
-  return path.join(mirrorRoot, ".leasehold-sync-cursor.json");
+
+  const cursorPath = defaultCursorPath(mirrorRoot);
+  const legacyInMirror = path.join(mirrorRoot, ".leasehold-sync-cursor.json");
+  if (!fs.existsSync(cursorPath) && fs.existsSync(legacyInMirror)) {
+    fs.mkdirSync(path.dirname(cursorPath), { recursive: true });
+    fs.copyFileSync(legacyInMirror, cursorPath);
+    console.log(`[sync-changed] Migrated cursor from staging to ${cursorPath}`);
+  }
+  return cursorPath;
 }
 
 function loadCursor(cursorPath) {

@@ -40,7 +40,7 @@ npm run sync:changed
 | `--force-all` | Import every property even if fingerprint unchanged |
 | `--dry-run` | No POST, no cursor update |
 
-Cursor file: `<LEASEHOLD_MIRROR_ROOT>/.leasehold-sync-cursor.json`
+Cursor file: `C:\Propera\.leasehold-sync-cursor.json` (parent of mirror root; not inside staging — `/MIR` purges it)
 
 ---
 
