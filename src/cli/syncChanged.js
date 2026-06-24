@@ -8,6 +8,11 @@ import { buildImportPayload } from "../lib/buildImportPayload.js";
 import { loadPropertyMapping, listImportEnabledProperties } from "../lib/loadConfig.js";
 import { fingerprintPropertyMirror } from "../lib/propertyMirrorFingerprint.js";
 import { resolveMirrorRoot } from "../lib/mirrorRoot.js";
+import {
+  isSyncDeltaPilotProperty,
+  isDeltaBaselineSeeded,
+  mergePropertyDeltaCursor,
+} from "../lib/syncDeltaState.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -178,7 +183,8 @@ try {
       mapping,
       properaPropertyCode: code,
     });
-    const payload = buildImportPayload(exportResult);
+    const prevPropertyCursor = cursor.properties[code] ?? null;
+    const payload = buildImportPayload(exportResult, { propertyCursor: prevPropertyCursor });
 
     if (args.dryRun) {
       imported += 1;
@@ -187,6 +193,9 @@ try {
         action: "dry_run",
         unitCount: payload.facts.length,
         fingerprint,
+        deltaFiltering: payload.delta_meta?.filtering ?? false,
+        leaseSignals: payload.delta_meta?.lease_signal_count ?? 0,
+        ledgerSignals: payload.delta_meta?.ledger_signal_count ?? 0,
       });
       continue;
     }
@@ -194,12 +203,20 @@ try {
     try {
       const result = await postImport(payload, appUrl, secret);
       imported += 1;
-      cursor.properties[code] = {
-        fingerprint,
-        lastImportAt: new Date().toISOString(),
-        lastUpserted: result?.upserted ?? payload.facts.length,
-        lastSyncedAt: result?.syncedAt ?? payload.synced_at,
-      };
+      const seedBaseline =
+        isSyncDeltaPilotProperty(code) && !isDeltaBaselineSeeded(prevPropertyCursor);
+      const nextPropertyCursor = mergePropertyDeltaCursor(
+        {
+          ...(prevPropertyCursor && typeof prevPropertyCursor === "object" ? prevPropertyCursor : {}),
+          fingerprint,
+          lastImportAt: new Date().toISOString(),
+          lastUpserted: result?.upserted ?? payload.facts.length,
+          lastSyncedAt: result?.syncedAt ?? payload.synced_at,
+        },
+        payload.delta_meta?.unit_delta_map ?? {},
+        { seedBaseline }
+      );
+      cursor.properties[code] = nextPropertyCursor;
       lines.push({
         propertyCode: code,
         action: "imported",
@@ -207,6 +224,11 @@ try {
         netRentEnriched: result?.netRentEnriched ?? 0,
         depositsEnriched: result?.depositsEnriched ?? 0,
         unmatchedUnits: result?.unmatchedUnits ?? [],
+        deltaBaselineSeeded: Boolean(nextPropertyCursor?.delta?.baselineSeededAt),
+        skippedLeaseUnchanged: payload.delta_meta?.skipped_lease_unchanged ?? 0,
+        skippedLedgerKnown: payload.delta_meta?.skipped_ledger_known ?? 0,
+        leaseSignals: payload.delta_meta?.lease_signal_count ?? 0,
+        ledgerSignals: payload.delta_meta?.ledger_signal_count ?? 0,
       });
       console.log(
         `[sync-changed] ${code}: OK — ${result?.upserted ?? payload.facts.length} units`

@@ -9,7 +9,7 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-function fingerprintLeaseTermsBody(body) {
+export function fingerprintLeaseTermsBody(body) {
   const parts = [
     body.rent_cents,
     body.lease_start,

@@ -3,6 +3,14 @@
 import { buildLeaseTermsSyncSignals } from "../signals/buildLeaseTermsSyncSignals.js";
 import { buildLedgerEventSignals } from "../signals/buildLedgerEventSignals.js";
 import { isLedgerMimicPilotUnit } from "../signals/ledgerMimicPilot.js";
+import {
+  shouldFilterSignals,
+  readUnitDeltaMap,
+  filterLeaseTermsSignalsByDelta,
+  filterLedgerEventSignalsByDelta,
+  buildUnitDeltaMapFromFacts,
+  isSyncDeltaPilotProperty,
+} from "./syncDeltaState.js";
 
 function optionalCents(value) {
   if (value == null || value === "") return null;
@@ -38,13 +46,18 @@ function mapFact(row) {
   };
 }
 
-export function buildImportPayload(exportResult) {
+/**
+ * @param {Record<string, unknown>} exportResult
+ * @param {{ propertyCursor?: Record<string, unknown> | null }} [options]
+ */
+export function buildImportPayload(exportResult, options = {}) {
   const facts = Array.isArray(exportResult?.facts) ? exportResult.facts : [];
   const propertyCode = String(exportResult?.property?.propera_property_code ?? "").trim().toUpperCase();
   const syncedAt =
     String(facts[0]?.synced_at ?? "").trim() || new Date().toISOString();
+  const propertyCursor = options.propertyCursor ?? null;
 
-  const { signals } = buildLeaseTermsSyncSignals({
+  const leaseBuilt = buildLeaseTermsSyncSignals({
     facts,
     propertyCode,
     syncedAt,
@@ -57,11 +70,42 @@ export function buildImportPayload(exportResult) {
     isPilotUnit: isLedgerMimicPilotUnit,
   });
 
+  let leaseSignals = leaseBuilt.signals;
+  let ledgerSignals = ledgerBuilt.signals;
+  let skippedLeaseUnchanged = 0;
+  let skippedLedgerKnown = 0;
+
+  if (shouldFilterSignals(propertyCode, propertyCursor)) {
+    const unitDeltaMap = readUnitDeltaMap(propertyCursor);
+    const leaseFiltered = filterLeaseTermsSignalsByDelta(leaseSignals, unitDeltaMap);
+    leaseSignals = leaseFiltered.signals;
+    skippedLeaseUnchanged = leaseFiltered.skippedUnchanged;
+
+    const ledgerFiltered = filterLedgerEventSignalsByDelta(ledgerSignals, unitDeltaMap);
+    ledgerSignals = ledgerFiltered.signals;
+    skippedLedgerKnown = ledgerFiltered.skippedKnown;
+  }
+
+  const unitDeltaMapFromExport = buildUnitDeltaMapFromFacts({
+    facts,
+    propertyCode,
+    syncedAt,
+  });
+
   return {
     source_system: "leasehold",
     propera_property_code: propertyCode,
     synced_at: syncedAt,
     facts: facts.map(mapFact),
-    signals: [...signals, ...ledgerBuilt.signals],
+    signals: [...leaseSignals, ...ledgerSignals],
+    delta_meta: {
+      pilot: isSyncDeltaPilotProperty(propertyCode),
+      filtering: shouldFilterSignals(propertyCode, propertyCursor),
+      skipped_lease_unchanged: skippedLeaseUnchanged,
+      skipped_ledger_known: skippedLedgerKnown,
+      lease_signal_count: leaseSignals.length,
+      ledger_signal_count: ledgerSignals.length,
+      unit_delta_map: unitDeltaMapFromExport,
+    },
   };
 }
