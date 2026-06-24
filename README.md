@@ -21,7 +21,9 @@ Propera stays **channel-agnostic** and **source-agnostic**. What varies per clie
 
 **Intent (locked):** [../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md](../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md) — baseline once, then emit **actions only** (staff-click model). Absent/null in export = **no intent**, not “clear in Propera.”
 
-**Shipped:** Export includes **`signals[]`** with `lease_terms_sync` (lease terms intent) alongside snapshot **facts** — see **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`**. Ledger event signals (`payment_received`, `monthly_billing`, …) ship for **pilot units** in `config/ledger-mimic-pilot.json` (default: **WESTFIELD unit 101**).
+**Agent handoff:** [../propera-app/docs/OFFICE_AGENT_HANDOFF.md](../propera-app/docs/OFFICE_AGENT_HANDOFF.md) · [AGENTS.md](./AGENTS.md)
+
+**Shipped (2026-06-24):** Export includes **`signals[]`** — `lease_terms_sync` + ledger events for **WESTFIELD all units** (`config/ledger-mimic-pilot.json`). WESTFIELD **sync delta** after baseline seed (`config/sync-delta-pilot.json`). Omit null deposit keys. See **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`**.
 
 **Unit catalog rule (locked):** Leasehold `unit_label` is a **match key only** — used to find the right `unit_catalog_id` when posting financial snapshots. Propera `units` (label, floor, bedrooms, bathrooms, notes, layout) is **always operator truth**. The bridge must **never** create, rename, or overwrite unit catalog fields from Leasehold room numbers. If Propera has blanks, staff fill them in the portal — not from legacy import.
 
@@ -47,6 +49,8 @@ Do **not** point tools at `\\lhdata\lhmirror`, OneDrive copies, or other paths u
 
 | File | Purpose |
 |------|---------|
+| [AGENTS.md](./AGENTS.md) | **Agent entry — read first** |
+| [../propera-app/docs/OFFICE_AGENT_HANDOFF.md](../propera-app/docs/OFFICE_AGENT_HANDOFF.md) | Office pull/sync/verify + current state |
 | [MANIFEST.md](./MANIFEST.md) | What each file type is, import tiers, RA/A prefixes |
 | [MIRROR_SYNC.md](./MIRROR_SYNC.md) | Home snapshot vs office `\\lhdata\lhmirror` — manual + future auto sync |
 | [config/property-mapping.json](./config/property-mapping.json) | RA#### ↔ Propera property codes |
@@ -76,13 +80,15 @@ node scripts/reconcileOxpsWestfield.js   # LH OXPS print vs bridge export (WESTF
 
 After parser changes: `npm test`, re-export, re-import in propera-app (**Financial → Imports**).
 
-**Known mirror gap (2026-06-08):** WESTFIELD **unit 314** — LH screen shows Other $700; `RA0003S.Dat` / `R.Dat` in snapshot have no unit 314 deposit rows. Bridge correctly exports `other_deposit_cents: null`. Fix: refresh mirror from office `\\lhdata`; interim ops may patch Supabase (see `FINANCIAL_LEASEHOLD_SYNC.md`).
+**Known mirror gap (2026-06):** WESTFIELD **unit 314** — LH screen shows Other $700; S/R.Dat have no unit 314 rows. Bridge **omits** `other_deposit_cents` (no null). Staff sets $700 in Propera; V2 **preserves** on sync. Verify: `propera-app/scripts/verify_ledger_mimic_westfield.sql` (314 block).
 
-## Status
+## Status (2026-06-24)
 
-- **Phase 0:** manifest + mapping (this package)
-- **Phase 1:** parsers for `RA####.DAT`, `RA####H` + export CLI (**WESTGRAND proof**)
-- **Phase 2:** Propera import API + migration 058 (separate repo — accepts normalized facts only)
+- **Phase 0–1:** parsers + export CLI — **done**
+- **Phase 1.5:** propera-app import API + snapshots — **done**
+- **Phase 2:** `signals[]` — `lease_terms_sync` + ledger events — **done (WESTFIELD pilot)**
+- **Phase 2b:** WESTFIELD sync delta (changed-only after baseline) — **done**
+- **Next:** occupancy action signals (`lease_close` / `lease_open`) — **not started** (see propera-app `OFFICE_AGENT_HANDOFF.md`)
 
 ## Quick start
 
