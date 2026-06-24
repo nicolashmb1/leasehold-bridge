@@ -74,12 +74,12 @@ export function buildLeaseTermsBodyFromFact(fact, syncedAt) {
     rent_cents: rentCents,
     lease_start: leaseStart,
     lease_end: leaseEnd,
-    security_deposit_cents: securityCents,
-    other_deposit_cents: otherCents,
-    pet_deposit_cents: petCents,
-    key_deposit_cents: keyCents,
     charge_lines: chargeLines,
   };
+  if (securityCents != null) body.security_deposit_cents = securityCents;
+  if (otherCents != null) body.other_deposit_cents = otherCents;
+  if (petCents != null) body.pet_deposit_cents = petCents;
+  if (keyCents != null) body.key_deposit_cents = keyCents;
 
   if (hasNetRent) {
     body.tenant_net_rent_cents = pattern.tenantNetRentCents;
