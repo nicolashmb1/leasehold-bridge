@@ -75,7 +75,8 @@ Propera migrations **096** (key + `deposits_derived_at`) and **097** (other + pe
 
 ```powershell
 npm run validate:deposits          # portfolio formula check
-node scripts/reconcileOxpsWestfield.js   # LH OXPS print vs bridge export (WESTFIELD)
+node scripts/reconcileOxpsWestfield.js   # LH OXPS print vs bridge export (WESTFIELD deposits)
+node scripts/reconcileOxpsTenantNames.js # LH OXPS tenant names vs parser (all properties)
 ```
 
 After parser changes: `npm test`, re-export, re-import in propera-app (**Financial → Imports**).

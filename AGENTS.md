@@ -8,8 +8,9 @@
 ## Start here (mandatory)
 
 1. **`../propera-app/docs/OFFICE_AGENT_HANDOFF.md`** — **current state, pull commands, verify SQL, what's shipped, what's next.** Read this before changing bridge or sync logic.
-2. **`../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md`** — locked intent: bridge = actor, baseline + deltas, silence ≠ deletion.
-3. **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`** — signal shapes (when D: or GitHub available).
+2. **`../propera-app/docs/WESTFIELD_TENANT_NAMES_AND_REPORTS.md`** — **2026-06-25:** parser name fix, PDF reports, roster vs leaseholder, office verify steps.
+3. **`../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md`** — locked intent: bridge = actor, baseline + deltas, silence ≠ deletion.
+4. **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`** — signal shapes (when D: or GitHub available).
 
 ---
 
@@ -53,6 +54,17 @@ Cursor file: `C:\Propera\.leasehold-sync-cursor.json` (parent of mirror root; no
 
 **First successful WESTFIELD import** after upgrade → full signals + seeds `delta.baselineSeededAt`.  
 **Later syncs** → changed lease terms + new ledger lines only.
+
+## Tenant names (2026-06-25)
+
+Parser fix in `src/parsers/parseUnitMasterDat.js` — seg2 given + seg3 surname; fixes wrong PDF names (e.g. WESTFIELD 204 → `GABRIEL GARCIA`).
+
+```powershell
+npm test
+node scripts/reconcileOxpsTenantNames.js   # optional: vs LH reports.oxps extract
+```
+
+After pull: office **must sync** so `tenant_name_display` refreshes in Supabase. See `../propera-app/docs/WESTFIELD_TENANT_NAMES_AND_REPORTS.md`.
 
 ---
 
