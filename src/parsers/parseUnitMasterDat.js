@@ -28,58 +28,113 @@ function parseBalanceFromSegment1(segment1) {
   return Number.isFinite(n) ? n : null;
 }
 
-const ADDRESS_MARKERS_RE = /(STREET|AVENUE|ELIZABETH|WEST GRAND|WESTFIELD|MURRAY|MORRIS|PENN|LLC|\d{5})/i;
+const SEG3_ADDRESS_COLUMN_RE =
+  /^(?:\d{3}\s+(?:WESTFIELD|WEST\b)|ELIZABETH\s+NJ\s+\d{5})/i;
 
-function splitFusedNameToken(token) {
-  const text = String(token || "").trim();
-  if (!text || /\s/.test(text) || text.length < 10) return [text].filter(Boolean);
+function extractTrailingNameColumns(seg2Text) {
+  const cols = seg2Text
+    .split(/\s{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const names = [];
+  for (let i = cols.length - 1; i >= 0 && names.length < 2; i -= 1) {
+    const col = cols[i];
+    if (/^[\d.]+$/.test(col)) continue;
+    if (/^[A-Za-z]/.test(col) && !/^[\d.]+/.test(col)) {
+      names.unshift(col);
+    } else {
+      break;
+    }
+  }
+  return names;
+}
 
-  const mixedCase = text.match(/^([A-Za-z]+?)([A-Z][a-z].*)$/);
-  if (mixedCase) return [mixedCase[1].trim(), mixedCase[2].trim()];
+function extractSeg3NameColumns(seg3Text) {
+  const cols = seg3Text
+    .split(/\s{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const names = [];
+  for (const col of cols) {
+    if (SEG3_ADDRESS_COLUMN_RE.test(col)) break;
+    if (/\b(?:WESTFIELD|WEST)\b.*\b(?:AVE|AVENUE|ST)\b/i.test(col)) break;
+    if (/\bELIZABETH\s+NJ\b/i.test(col)) break;
+    if (/^\d{5}$/.test(col)) break;
+    if (/[A-Za-z]/.test(col)) names.push(col);
+  }
+  return names;
+}
 
-  const allCaps = text.match(/^([A-Z]{3,})([A-Z]{3,})$/);
-  if (allCaps) return [allCaps[1].trim(), allCaps[2].trim()];
+/** Merge name fragments split across segment 2/3 column boundary (e.g. ASHL + EY → ASHLEY). */
+function mergeCrossSegmentNameFragments(seg2Cols, seg3Cols) {
+  if (!seg2Cols.length || !seg3Cols.length) return { seg2Cols, seg3Cols };
 
-  return [text];
+  const lastSeg2 = seg2Cols[seg2Cols.length - 1];
+  const firstSeg3 = seg3Cols[0];
+  const lastTok = lastSeg2.split(/\s+/).pop() ?? "";
+  const firstTok = firstSeg3.split(/\s+/)[0] ?? "";
+
+  const shouldMerge =
+    lastTok.length > 0 &&
+    firstTok.length > 0 &&
+    /^[A-Z]+$/.test(lastTok + firstTok) &&
+    ((lastTok.length <= 2 && firstTok.length <= 4) ||
+      (lastTok.length === 3 && firstTok.length <= 2) ||
+      (lastTok.length === 4 && firstTok.length <= 2));
+
+  if (shouldMerge) {
+    const merged = lastTok + firstTok;
+    const lastColParts = lastSeg2.split(/\s+/);
+    lastColParts[lastColParts.length - 1] = merged;
+    const nextSeg2 = [...seg2Cols];
+    nextSeg2[nextSeg2.length - 1] = lastColParts.join(" ");
+    const restSeg3 = firstSeg3.slice(firstTok.length).trim();
+    const nextSeg3 = restSeg3 ? [restSeg3, ...seg3Cols.slice(1)] : seg3Cols.slice(1);
+    return { seg2Cols: nextSeg2, seg3Cols: nextSeg3 };
+  }
+
+  return { seg2Cols, seg3Cols };
 }
 
 function parseTenantName(segment2, segment3) {
-  const combined = readAscii(segment2, 0, SEGMENT_BYTES) + readAscii(segment3, 0, SEGMENT_BYTES);
-  const text = combined.replace(/^[\d.\s]+/, "");
-  let columns = text
-    .split(/\s{2,}/)
-    .map((part) => part.trim())
-    .filter((part) => part && /[A-Za-z]/.test(part) && !ADDRESS_MARKERS_RE.test(part));
+  const seg2Text = readAscii(segment2, 0, SEGMENT_BYTES);
+  const seg3Text = readAscii(segment3, 0, SEGMENT_BYTES);
 
-  if (!columns.length) return null;
+  let seg2Cols = extractTrailingNameColumns(seg2Text);
+  let seg3Cols = extractSeg3NameColumns(seg3Text);
+  ({ seg2Cols, seg3Cols } = mergeCrossSegmentNameFragments(seg2Cols, seg3Cols));
 
-  if (columns.length === 1) {
-    columns = splitFusedNameToken(columns[0]);
+  if (!seg2Cols.length && !seg3Cols.length) return null;
+
+  const firstCol = seg2Cols[0] ?? "";
+  const givenParts = firstCol.includes(" ")
+    ? firstCol.split(/\s+/).filter(Boolean)
+    : [firstCol].filter(Boolean);
+
+  if (seg2Cols.length >= 2) {
+    const second = seg2Cols[1].trim();
+    // Skip 3-char junk fragments (e.g. "LIA" beside stale seg3 names on WESTFIELD 204).
+    if (second.length > 3 && !second.includes(" ")) givenParts.push(second);
   }
 
-  const parts = [];
-  for (const column of columns) {
-    if (column.includes(" ")) {
-      parts.push(column);
-      continue;
+  const givenFirst = givenParts[0]?.toUpperCase() ?? "";
+  if (!seg3Cols.length) {
+    const name = givenParts.join(" ").trim();
+    return name || null;
+  }
+
+  let surnameToken = seg3Cols[0].split(/\s+/)[0];
+  if (seg3Cols.length >= 3 && givenFirst) {
+    const col0First = seg3Cols[0].split(/\s+/)[0]?.toUpperCase() ?? "";
+    // Three+ name columns: col 0 is often a stale prior tenant first name (WESTFIELD 204).
+    if (col0First && givenFirst !== col0First) {
+      surnameToken = seg3Cols[1].split(/\s+/)[0];
     }
-    parts.push(column);
-    if (parts.length >= 3) break;
   }
 
-  const normalized = parts.flatMap((part) => (part.includes(" ") ? [part] : [part])).filter(Boolean);
-  if (!normalized.length) return null;
-  if (normalized.length === 1) return normalized[0];
-
-  const first = normalized[0];
-  const second = normalized[1];
-  if (second.includes(" ")) return `${first} ${second.split(/\s+/)[0]}`.trim();
-
-  if (normalized.length >= 3 && !normalized[2].includes(" ")) {
-    return `${first} ${second} ${normalized[2]}`.trim();
-  }
-
-  return `${first} ${second}`.trim();
+  const parts = [...givenParts, surnameToken].filter(Boolean);
+  const name = parts.join(" ").trim();
+  return name || null;
 }
 
 function parseUnitBlock(buffer, segmentIndex) {

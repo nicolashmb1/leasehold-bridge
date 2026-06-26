@@ -40,3 +40,16 @@ test("parseUnitMasterDat extracts full name for unit 407", () => {
   assert.ok(unit407);
   assert.equal(unit407.tenant_name, "ANTHONY FERREIRA");
 });
+
+test("parseUnitMasterDat WESTFIELD RA0003 — leaseholder names from seg2 given + seg3 surname", () => {
+  const westfieldPath = path.join(PACKAGE_ROOT, "lhmirror", "RA0003.DAT");
+  const buffer = fs.readFileSync(westfieldPath);
+  const parsed = parseUnitMasterDat(buffer);
+  const byLabel = (lab) => parsed.units.find((u) => String(u.unit_label).trim().slice(0, 3) === lab);
+
+  assert.equal(byLabel("204")?.tenant_name, "GABRIEL GARCIA");
+  assert.equal(byLabel("209")?.tenant_name, "ELIZABETH ARBOLEDA");
+  assert.equal(byLabel("207")?.tenant_name, "SUZETTE NEWBORN");
+  assert.equal(byLabel("201")?.tenant_name, "JUAN NOVA");
+  assert.equal(byLabel("301")?.tenant_name, "JOSE MARIA CEVALLOS");
+});
