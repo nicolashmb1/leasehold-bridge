@@ -24,8 +24,19 @@ export function lhPostedRowToSignalKind(row) {
   return "one_time_charge";
 }
 
+function slugDescription(text) {
+  return (
+    String(text ?? "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 48) || "EVENT"
+  );
+}
+
 /**
- * @param {{ sourceSystem?: string; propertyCode: string; unitLabel: string; effectiveDate: string; signalKind: string; amountCents: number | null; postedSequence?: number | null; reference?: string | null }} opts
+ * Stable business identity — do not use posted_sequence (window index shifts on re-import).
+ * @param {{ sourceSystem?: string; propertyCode: string; unitLabel: string; effectiveDate: string; signalKind: string; amountCents: number | null; reference?: string | null; description?: string | null; balanceAfterCents?: number | null }} opts
  */
 export function buildLedgerEventIdempotencyKey(opts) {
   const source = String(opts.sourceSystem ?? "leasehold").trim().toLowerCase() || "leasehold";
@@ -45,12 +56,19 @@ export function buildLedgerEventIdempotencyKey(opts) {
     opts.amountCents != null && Number.isFinite(Number(opts.amountCents))
       ? Math.abs(Math.round(Number(opts.amountCents)))
       : 0;
-  const seq =
-    opts.postedSequence != null && Number.isFinite(Number(opts.postedSequence))
-      ? `seq${Math.round(Number(opts.postedSequence))}`
-      : null;
   const ref = String(opts.reference ?? "").trim();
-  const tail = seq || (ref ? `ref${ref.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40)}` : "seq0");
+  const descSlug = slugDescription(opts.description);
+  const balanceAfter =
+    opts.balanceAfterCents != null && Number.isFinite(Number(opts.balanceAfterCents))
+      ? Math.abs(Math.round(Number(opts.balanceAfterCents)))
+      : null;
+
+  const tail = ref
+    ? `ref${ref.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40)}`
+    : balanceAfter != null
+      ? `${descSlug}:b${balanceAfter}`
+      : descSlug;
+
   return `${source}:${property}:${unit}:${date}:${kindShort}:${amount}:${tail}`;
 }
 
@@ -99,6 +117,11 @@ export function buildLedgerEventSignals({ facts, propertyCode, syncedAt, isPilot
         row.posted_sequence != null && Number.isFinite(Number(row.posted_sequence))
           ? Math.round(Number(row.posted_sequence))
           : null;
+      const description = String(row.description ?? row.kind ?? signalKind).trim().slice(0, 200);
+      const balanceAfterCents =
+        row.balance_after_cents != null && Number.isFinite(Number(row.balance_after_cents))
+          ? Math.round(Number(row.balance_after_cents))
+          : null;
 
       signals.push({
         schema_version: 1,
@@ -113,14 +136,15 @@ export function buildLedgerEventSignals({ facts, propertyCode, syncedAt, isPilot
           effectiveDate,
           signalKind,
           amountCents,
-          postedSequence,
           reference: row.reference,
+          description,
+          balanceAfterCents,
         }),
         effective_at: effectiveAt,
         body: {
           effective_date: effectiveDate,
           amount_cents: amountCents,
-          description: String(row.description ?? row.kind ?? signalKind).trim().slice(0, 200),
+          description,
           reference: row.reference != null ? String(row.reference).trim() || null : null,
           balance_after_cents:
             row.balance_after_cents != null && Number.isFinite(Number(row.balance_after_cents))

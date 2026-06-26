@@ -49,6 +49,16 @@ function extractTrailingNameColumns(seg2Text) {
   return names;
 }
 
+function looksLikeAddressCol(col) {
+  if (!col) return true;
+  if (SEG3_ADDRESS_COLUMN_RE.test(col)) return true;
+  if (/\b(?:WESTFIELD|WEST)\b.*\b(?:AVE|AVENUE|ST)\b/i.test(col)) return true;
+  if (/\bELIZABETH\s+NJ\b/i.test(col)) return true;
+  if (/^\d{5}$/.test(col)) return true;
+  if (/^\d{3}$/.test(col)) return true;
+  return false;
+}
+
 function extractSeg3NameColumns(seg3Text) {
   const cols = seg3Text
     .split(/\s{2,}/)
@@ -56,10 +66,7 @@ function extractSeg3NameColumns(seg3Text) {
     .filter(Boolean);
   const names = [];
   for (const col of cols) {
-    if (SEG3_ADDRESS_COLUMN_RE.test(col)) break;
-    if (/\b(?:WESTFIELD|WEST)\b.*\b(?:AVE|AVENUE|ST)\b/i.test(col)) break;
-    if (/\bELIZABETH\s+NJ\b/i.test(col)) break;
-    if (/^\d{5}$/.test(col)) break;
+    if (looksLikeAddressCol(col)) break;
     if (/[A-Za-z]/.test(col)) names.push(col);
   }
   return names;
@@ -96,6 +103,56 @@ function mergeCrossSegmentNameFragments(seg2Cols, seg3Cols) {
   return { seg2Cols, seg3Cols };
 }
 
+function isNameContinuationFragment(col) {
+  const text = String(col ?? "").trim();
+  if (!text) return true;
+  if (text.length <= 3) return true;
+  return /^[A-Z](\s+[A-Z])?$/.test(text);
+}
+
+function parsePrimaryCoTenantName(seg2Cols, seg3Cols) {
+  const tenant1Given = seg2Cols[0]?.trim();
+  if (!tenant1Given) return null;
+
+  // Variant B: tenant 2 first name is the last token in the sole seg2 column (e.g. 305:
+  // "JESSICA PAOLA TED" + seg3 "LOUIS" / "GRANADOS FLORES" / "MERCED").
+  if (seg2Cols.length === 1 && seg3Cols.length >= 3) {
+    const parts = tenant1Given.split(/\s+/).filter(Boolean);
+    const tenant1Surname = seg3Cols[1]?.trim();
+    if (
+      parts.length >= 2 &&
+      tenant1Surname &&
+      !looksLikeAddressCol(seg3Cols[2]) &&
+      !isNameContinuationFragment(seg3Cols[0])
+    ) {
+      const tenant1GivenOnly = parts.slice(0, -1).join(" ");
+      return `${tenant1GivenOnly} ${tenant1Surname}`.trim();
+    }
+  }
+
+  if (seg2Cols.length < 2 || seg3Cols.length < 2) return null;
+
+  const surname1 = seg3Cols[1]?.trim().split(/\s+/)[0];
+  if (seg3Cols.length >= 3 && surname1 && !looksLikeAddressCol(seg3Cols[2])) {
+    // Two leaseholders: seg2[1]+seg3[0] is tenant 2 given; seg3[1] is tenant 1 surname.
+    return `${tenant1Given} ${surname1}`.trim();
+  }
+
+  if (seg3Cols[0] === seg3Cols[1]) {
+    return `${tenant1Given} ${seg3Cols[0]}`.trim();
+  }
+
+  if (
+    seg3Cols.length === 2 &&
+    !isNameContinuationFragment(seg3Cols[0]) &&
+    !looksLikeAddressCol(seg3Cols[1])
+  ) {
+    return `${tenant1Given} ${seg3Cols[0]}`.trim();
+  }
+
+  return null;
+}
+
 function parseTenantName(segment2, segment3) {
   const seg2Text = readAscii(segment2, 0, SEGMENT_BYTES);
   const seg3Text = readAscii(segment3, 0, SEGMENT_BYTES);
@@ -105,6 +162,9 @@ function parseTenantName(segment2, segment3) {
   ({ seg2Cols, seg3Cols } = mergeCrossSegmentNameFragments(seg2Cols, seg3Cols));
 
   if (!seg2Cols.length && !seg3Cols.length) return null;
+
+  const coTenantName = parsePrimaryCoTenantName(seg2Cols, seg3Cols);
+  if (coTenantName) return coTenantName;
 
   const firstCol = seg2Cols[0] ?? "";
   const givenParts = firstCol.includes(" ")

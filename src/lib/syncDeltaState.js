@@ -123,9 +123,10 @@ function ledgerKeyFromPostedRow(propertyCode, unitLabel, row) {
   if (amountCents == null || amountCents === 0) return null;
 
   const signalKind = lhPostedRowToSignalKind(row);
-  const postedSequence =
-    row.posted_sequence != null && Number.isFinite(Number(row.posted_sequence))
-      ? Math.round(Number(row.posted_sequence))
+  const description = String(row.description ?? row.kind ?? signalKind).trim().slice(0, 200);
+  const balanceAfterCents =
+    row.balance_after_cents != null && Number.isFinite(Number(row.balance_after_cents))
+      ? Math.round(Number(row.balance_after_cents))
       : null;
 
   return buildLedgerEventIdempotencyKey({
@@ -135,8 +136,9 @@ function ledgerKeyFromPostedRow(propertyCode, unitLabel, row) {
     effectiveDate,
     signalKind,
     amountCents,
-    postedSequence,
     reference: row.reference,
+    description,
+    balanceAfterCents,
   });
 }
 

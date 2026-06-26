@@ -52,4 +52,9 @@ test("parseUnitMasterDat WESTFIELD RA0003 — leaseholder names from seg2 given 
   assert.equal(byLabel("207")?.tenant_name, "SUZETTE NEWBORN");
   assert.equal(byLabel("201")?.tenant_name, "JUAN NOVA");
   assert.equal(byLabel("301")?.tenant_name, "JOSE MARIA CEVALLOS");
+  assert.equal(byLabel("210")?.tenant_name, "JASON M MONTALVO");
+  assert.equal(byLabel("205")?.tenant_name, "NATHANIEL PALMER");
+  assert.equal(byLabel("304")?.tenant_name, "JOSE GOMEZ");
+  assert.equal(byLabel("307")?.tenant_name, "ELSA PAZMINO");
+  assert.equal(byLabel("305")?.tenant_name, "JESSICA PAOLA GRANADOS FLORES");
 });

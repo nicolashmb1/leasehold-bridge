@@ -52,18 +52,21 @@ test("filterLeaseTermsSignalsByDelta — skips unchanged unit fingerprint", () =
 });
 
 test("filterLedgerEventSignalsByDelta — skips known idempotency keys", () => {
-  const key = "leasehold:WESTFIELD:101:2026-06-03:payment:253100:seq45";
+  const key = "leasehold:WESTFIELD:101:2026-06-03:payment:253100:ref16878";
   const { signals: kept, skippedKnown } = filterLedgerEventSignalsByDelta(
     [
       { unit_label: "101", idempotency_key: key },
-      { unit_label: "101", idempotency_key: "leasehold:WESTFIELD:101:2026-06-04:payment:100000:seq46" },
+      {
+        unit_label: "101",
+        idempotency_key: "leasehold:WESTFIELD:101:2026-06-04:payment:100000:ref16879",
+      },
     ],
     { "101": { ledgerKeys: [key] } }
   );
 
   assert.equal(skippedKnown, 1);
   assert.equal(kept.length, 1);
-  assert.ok(String(kept[0].idempotency_key).includes("seq46"));
+  assert.ok(String(kept[0].idempotency_key).includes("ref16879"));
 });
 
 test("mergePropertyDeltaCursor — seeds baseline on first successful import", () => {
