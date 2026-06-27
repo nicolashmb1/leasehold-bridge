@@ -10,6 +10,7 @@ test("isLedgerMimicPilotUnit matches building wildcard", () => {
   assert.equal(isLedgerMimicPilotUnit("WESTFIELD", "101"), true);
   assert.equal(isLedgerMimicPilotUnit("WESTFIELD", "314"), true);
   assert.equal(isLedgerMimicPilotUnit("westfield", "102"), true);
+  assert.equal(isLedgerMimicPilotUnit("PENN", "203"), true);
   assert.equal(isLedgerMimicPilotUnit("MURRAY", "101"), false);
   assert.equal(isLedgerMimicPilotUnit("WESTFIELD", ""), false);
 });

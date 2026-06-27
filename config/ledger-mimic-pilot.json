@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "units_by_property": {
-    "WESTFIELD": ["*"]
+    "WESTFIELD": ["*"],
+    "PENN": ["*"]
   }
 }
