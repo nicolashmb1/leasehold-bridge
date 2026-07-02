@@ -1,7 +1,10 @@
 {
   "enabled": true,
   "units_by_property": {
+    "WESTGRAND": ["*"],
     "WESTFIELD": ["*"],
+    "MURRAY": ["*"],
+    "MORRIS": ["*"],
     "PENN": ["*"]
   }
 }
