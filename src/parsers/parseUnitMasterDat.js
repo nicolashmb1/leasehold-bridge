@@ -29,18 +29,29 @@ function parseBalanceFromSegment1(segment1) {
 }
 
 const SEG3_ADDRESS_COLUMN_RE =
-  /^(?:\d{3}\s+(?:WESTFIELD|WEST\b|PENNSYLVANIA|PENN\b)|ELIZABETH\s+NJ\s+\d{5})/i;
+  /^(?:\d{2,3}-\d{2,3}\s+MURRAY|\d{3}\s+(?:WESTFIELD|WEST\b|PENNSYLVANIA|PENN\b|MORRIS|GRAND)|ELIZABETH\s+NJ\s+\d{5})/i;
 
-/** Strip property address tail accidentally fused into a name column (PENN 702 Penn, etc.). */
+const STREET_TOKEN_AFTER_NUMBER =
+  /^(?:PENNSYLVANIA|PENN|WESTFIELD|WEST|MURRAY|MORRIS|GRAND|AVE|AVENUE|ST|STREET|ELIZABETH)/i;
+
+const EMBEDDED_ADDRESS_TAIL_PATTERNS = [
+  /\s+\d{3}\s+PENNSYLVANIA(?:\s+(?:AVENUE|AVE\.?))?.*$/i,
+  /\s+\d{3}\s+PENN(?:\s+|$).*/i,
+  /\s+\d{3}\s+(?:WESTFIELD|WEST)\b.*$/i,
+  /\s+\d{2,3}-\d{2,3}\s+MURRAY(?:\s+(?:ST|STREET))?.*$/i,
+  /\s+\d{3}\s+MORRIS(?:\s+(?:AVE|AVENUE))?.*$/i,
+  /\s+\d{3}\s+(?:WEST\s+)?GRAND(?:\s+(?:ST|STREET))?.*$/i,
+];
+
+/** Strip property address tail accidentally fused into a name column. */
 export function sanitizeTenantDisplayName(name) {
-  const text = String(name ?? "").trim();
+  let text = String(name ?? "").trim();
   if (!text) return null;
-  const stripped = text
-    .replace(/\s+\d{3}\s+PENNSYLVANIA(?:\s+(?:AVENUE|AVE\.?))?.*$/i, "")
-    .replace(/\s+\d{3}\s+PENN(?:\s+|$).*/i, "")
-    .replace(/\s+\d{3}\s+(?:WESTFIELD|WEST)\b.*$/i, "")
-    .trim();
-  return stripped || null;
+  for (const re of EMBEDDED_ADDRESS_TAIL_PATTERNS) {
+    text = text.replace(re, "");
+  }
+  text = text.trim();
+  return text || null;
 }
 
 function extractNameTokensStoppingAtAddress(text) {
@@ -51,11 +62,12 @@ function extractNameTokensStoppingAtAddress(text) {
   const out = [];
   for (let i = 0; i < tokens.length; i += 1) {
     const tok = tokens[i];
-    if (/^\d{3}$/.test(tok) && i + 1 < tokens.length) {
+    if (
+      (/^\d{3}$/.test(tok) || /^\d{2,3}-\d{2,3}$/.test(tok)) &&
+      i + 1 < tokens.length
+    ) {
       const next = tokens[i + 1].toUpperCase();
-      if (/^(?:PENNSYLVANIA|PENN|WESTFIELD|WEST|AVE|AVENUE|ST|STREET|ELIZABETH)/.test(next)) {
-        break;
-      }
+      if (STREET_TOKEN_AFTER_NUMBER.test(next)) break;
     }
     if (looksLikeAddressCol(tok)) break;
     out.push(tok);
@@ -86,10 +98,16 @@ function looksLikeAddressCol(col) {
   if (SEG3_ADDRESS_COLUMN_RE.test(col)) return true;
   if (/\b\d{3}\s+PENNSYLVANIA\b/i.test(col)) return true;
   if (/\bPENNSYLVANIA\s+(?:AVENUE|AVE\.?)\b/i.test(col)) return true;
+  if (/\b\d{2,3}-\d{2,3}\s+MURRAY\b/i.test(col)) return true;
+  if (/\bMURRAY\s+(?:ST|STREET)\b/i.test(col)) return true;
+  if (/\b\d{3}\s+MORRIS\b/i.test(col)) return true;
+  if (/\bMORRIS\s+(?:AVE|AVENUE)\b/i.test(col)) return true;
+  if (/\b\d{3}\s+(?:WEST\s+)?GRAND\b/i.test(col)) return true;
   if (/\b(?:WESTFIELD|WEST)\b.*\b(?:AVE|AVENUE|ST)\b/i.test(col)) return true;
   if (/\bELIZABETH\s+NJ\b/i.test(col)) return true;
   if (/^\d{5}$/.test(col)) return true;
   if (/^\d{3}$/.test(col)) return true;
+  if (/^\d{2,3}-\d{2,3}$/.test(col)) return true;
   return false;
 }
 

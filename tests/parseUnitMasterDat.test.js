@@ -65,3 +65,10 @@ test("sanitizeTenantDisplayName strips 702 PENNSYLVANIA address fused into name"
   assert.equal(sanitizeTenantDisplayName("JULIANO 702 PENNSYLVANIA AVENUE"), "JULIANO");
   assert.equal(sanitizeTenantDisplayName("GABRIEL GARCIA"), "GABRIEL GARCIA");
 });
+
+test("sanitizeTenantDisplayName strips Murray and Morris address tails", () => {
+  assert.equal(sanitizeTenantDisplayName("MARIA 57-77 MURRAY STREET"), "MARIA");
+  assert.equal(sanitizeTenantDisplayName("JOSE 57-77 MURRAY ST"), "JOSE");
+  assert.equal(sanitizeTenantDisplayName("ANA 540 MORRIS AVE"), "ANA");
+  assert.equal(sanitizeTenantDisplayName("LUIS 540 MORRIS AVENUE"), "LUIS");
+});
