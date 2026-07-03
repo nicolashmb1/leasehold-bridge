@@ -29,7 +29,39 @@ function parseBalanceFromSegment1(segment1) {
 }
 
 const SEG3_ADDRESS_COLUMN_RE =
-  /^(?:\d{3}\s+(?:WESTFIELD|WEST\b)|ELIZABETH\s+NJ\s+\d{5})/i;
+  /^(?:\d{3}\s+(?:WESTFIELD|WEST\b|PENNSYLVANIA|PENN\b)|ELIZABETH\s+NJ\s+\d{5})/i;
+
+/** Strip property address tail accidentally fused into a name column (PENN 702 Penn, etc.). */
+export function sanitizeTenantDisplayName(name) {
+  const text = String(name ?? "").trim();
+  if (!text) return null;
+  const stripped = text
+    .replace(/\s+\d{3}\s+PENNSYLVANIA(?:\s+(?:AVENUE|AVE\.?))?.*$/i, "")
+    .replace(/\s+\d{3}\s+PENN(?:\s+|$).*/i, "")
+    .replace(/\s+\d{3}\s+(?:WESTFIELD|WEST)\b.*$/i, "")
+    .trim();
+  return stripped || null;
+}
+
+function extractNameTokensStoppingAtAddress(text) {
+  const tokens = String(text ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const out = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const tok = tokens[i];
+    if (/^\d{3}$/.test(tok) && i + 1 < tokens.length) {
+      const next = tokens[i + 1].toUpperCase();
+      if (/^(?:PENNSYLVANIA|PENN|WESTFIELD|WEST|AVE|AVENUE|ST|STREET|ELIZABETH)/.test(next)) {
+        break;
+      }
+    }
+    if (looksLikeAddressCol(tok)) break;
+    out.push(tok);
+  }
+  return out;
+}
 
 function extractTrailingNameColumns(seg2Text) {
   const cols = seg2Text
@@ -52,6 +84,8 @@ function extractTrailingNameColumns(seg2Text) {
 function looksLikeAddressCol(col) {
   if (!col) return true;
   if (SEG3_ADDRESS_COLUMN_RE.test(col)) return true;
+  if (/\b\d{3}\s+PENNSYLVANIA\b/i.test(col)) return true;
+  if (/\bPENNSYLVANIA\s+(?:AVENUE|AVE\.?)\b/i.test(col)) return true;
   if (/\b(?:WESTFIELD|WEST)\b.*\b(?:AVE|AVENUE|ST)\b/i.test(col)) return true;
   if (/\bELIZABETH\s+NJ\b/i.test(col)) return true;
   if (/^\d{5}$/.test(col)) return true;
@@ -164,11 +198,11 @@ function parseTenantName(segment2, segment3) {
   if (!seg2Cols.length && !seg3Cols.length) return null;
 
   const coTenantName = parsePrimaryCoTenantName(seg2Cols, seg3Cols);
-  if (coTenantName) return coTenantName;
+  if (coTenantName) return sanitizeTenantDisplayName(coTenantName);
 
   const firstCol = seg2Cols[0] ?? "";
   const givenParts = firstCol.includes(" ")
-    ? firstCol.split(/\s+/).filter(Boolean)
+    ? extractNameTokensStoppingAtAddress(firstCol)
     : [firstCol].filter(Boolean);
 
   if (seg2Cols.length >= 2) {
@@ -180,7 +214,7 @@ function parseTenantName(segment2, segment3) {
   const givenFirst = givenParts[0]?.toUpperCase() ?? "";
   if (!seg3Cols.length) {
     const name = givenParts.join(" ").trim();
-    return name || null;
+    return sanitizeTenantDisplayName(name);
   }
 
   let surnameToken = seg3Cols[0].split(/\s+/)[0];
@@ -194,7 +228,7 @@ function parseTenantName(segment2, segment3) {
 
   const parts = [...givenParts, surnameToken].filter(Boolean);
   const name = parts.join(" ").trim();
-  return name || null;
+  return sanitizeTenantDisplayName(name);
 }
 
 function parseUnitBlock(buffer, segmentIndex) {

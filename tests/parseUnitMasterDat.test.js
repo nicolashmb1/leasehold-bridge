@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseUnitMasterDat } from "../src/parsers/parseUnitMasterDat.js";
+import { parseUnitMasterDat, sanitizeTenantDisplayName } from "../src/parsers/parseUnitMasterDat.js";
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const samplePath = path.join(PACKAGE_ROOT, "lhmirror", "RA0001.DAT");
@@ -57,4 +57,11 @@ test("parseUnitMasterDat WESTFIELD RA0003 — leaseholder names from seg2 given 
   assert.equal(byLabel("304")?.tenant_name, "JOSE GOMEZ");
   assert.equal(byLabel("307")?.tenant_name, "ELSA PAZMINO");
   assert.equal(byLabel("305")?.tenant_name, "JESSICA PAOLA GRANADOS FLORES");
+});
+
+test("sanitizeTenantDisplayName strips 702 PENNSYLVANIA address fused into name", () => {
+  assert.equal(sanitizeTenantDisplayName("JILL 702 PENNSYLVANIA AVENUE"), "JILL");
+  assert.equal(sanitizeTenantDisplayName("BRUNO 702 PENNSYLVANIA AVENUE"), "BRUNO");
+  assert.equal(sanitizeTenantDisplayName("JULIANO 702 PENNSYLVANIA AVENUE"), "JULIANO");
+  assert.equal(sanitizeTenantDisplayName("GABRIEL GARCIA"), "GABRIEL GARCIA");
 });
