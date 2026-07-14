@@ -22,13 +22,22 @@ function parseArgs(argv) {
     forceAll: false,
     dryRun: false,
     help: false,
+    only: null,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--skip-mirror") args.skipMirror = true;
     else if (arg === "--force-all") args.forceAll = true;
     else if (arg === "--dry-run") args.dryRun = true;
-    else if (arg === "--help" || arg === "-h") args.help = true;
+    else if (arg === "--only") {
+      const next = argv[i + 1];
+      if (!next || String(next).startsWith("--")) {
+        console.error("Missing property code after --only");
+        process.exit(1);
+      }
+      args.only = String(next).trim().toUpperCase();
+      i += 1;
+    } else if (arg === "--help" || arg === "-h") args.help = true;
   }
   return args;
 }
@@ -41,6 +50,7 @@ Office syncher: mirror robocopy → fingerprint changed properties → export �
 Options:
   --skip-mirror   Skip robocopy (staging already fresh)
   --force-all     Import every enabled property even when fingerprint unchanged
+  --only CODE     Limit to one Propera property code (e.g. MURRAY)
   --dry-run       Log actions without POST or cursor update
 
 Required env:
@@ -121,11 +131,18 @@ function runMirrorSync() {
 
 async function postImport(payload, appUrl, secret) {
   const url = `${appUrl.replace(/\/+$/, "")}/api/financial/import/accounting-snapshots`;
+  // F-01: M2M import requires org scope (see propera-app financialImportAuth).
+  const orgId = String(
+    process.env.PROPERA_IMPORT_ORG_ID || process.env.PROPERA_DEFAULT_ORG_ID || "grand"
+  )
+    .trim()
+    .toLowerCase();
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-propera-financial-import-secret": secret,
+      "x-propera-org-id": orgId,
     },
     body: JSON.stringify(payload),
   });
@@ -170,7 +187,16 @@ try {
   const cursorPath = resolveCursorPath(mirrorRoot);
   const cursor = loadCursor(cursorPath);
   const mapping = loadPropertyMapping();
-  const properties = listImportEnabledProperties(mapping);
+  let properties = listImportEnabledProperties(mapping);
+  if (args.only) {
+    properties = properties.filter(
+      (p) => String(p.propera_property_code).trim().toUpperCase() === args.only
+    );
+    if (!properties.length) {
+      console.error(`[sync-changed] no import-enabled property matching --only ${args.only}`);
+      process.exit(1);
+    }
+  }
 
   const lines = [];
   let imported = 0;

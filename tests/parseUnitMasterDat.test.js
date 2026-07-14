@@ -72,3 +72,27 @@ test("sanitizeTenantDisplayName strips Murray and Morris address tails", () => {
   assert.equal(sanitizeTenantDisplayName("ANA 540 MORRIS AVE"), "ANA");
   assert.equal(sanitizeTenantDisplayName("LUIS 540 MORRIS AVENUE"), "LUIS");
 });
+
+test("parseUnitMasterDat MURRAY RA0005 — includes commercial STORE1 plus apartments", () => {
+  const murrayPath = path.join(PACKAGE_ROOT, "lhmirror", "RA0005.DAT");
+  assert.ok(fs.existsSync(murrayPath), `missing fixture ${murrayPath}`);
+  const buffer = fs.readFileSync(murrayPath);
+  const parsed = parseUnitMasterDat(buffer);
+  const store1 = parsed.units.find((u) => String(u.unit_label).trim().toUpperCase() === "STORE1");
+  assert.ok(store1, "expected STORE1 commercial unit");
+  assert.equal(String(store1.unit_label).trim(), "STORE1");
+  assert.ok(
+    parsed.unit_count >= 84,
+    `expected ≥84 Murray units including STORE1, got ${parsed.unit_count}`
+  );
+  const apartments = parsed.units.filter((u) => /^\d{3}$/.test(String(u.unit_label).trim()));
+  assert.ok(apartments.length >= 83, `expected ≥83 numeric apartments, got ${apartments.length}`);
+  assert.ok(
+    store1.tenant_name && /JACKSON|CHERRY/i.test(store1.tenant_name),
+    `unexpected STORE1 tenant_name: ${store1.tenant_name}`
+  );
+  assert.ok(
+    store1.rent_dollars == null || Number(store1.rent_dollars) > 0,
+    "STORE1 should have rent when present on master"
+  );
+});

@@ -6,7 +6,18 @@ import {
 const SEGMENT_BYTES = 133;
 const SEGMENTS_PER_UNIT = 19;
 
-const UNIT_START_RE = /^\d{3}\s+\d\.\d/;
+/** Apartment masters: `101  3.0` / `101       3.0` (unit + beds.baths). */
+const APARTMENT_UNIT_START_RE = /^\d{3}\s+\d\.\d/;
+/**
+ * Commercial masters (Murray STORE1): `STORE1    2000` — letter prefix + digits,
+ * then whitespace. Keep bounded so garbage segments stay ignored.
+ */
+const COMMERCIAL_UNIT_START_RE = /^STORE\d{1,3}\s+/i;
+
+function isUnitMasterStart(head) {
+  const text = String(head ?? "");
+  return APARTMENT_UNIT_START_RE.test(text) || COMMERCIAL_UNIT_START_RE.test(text);
+}
 
 function readAscii(buffer, start, end) {
   return buffer.subarray(start, end).toString("ascii");
@@ -260,7 +271,7 @@ function parseUnitBlock(buffer, segmentIndex) {
   const segment3 = block.subarray(SEGMENT_BYTES * 3, SEGMENT_BYTES * 4);
 
   const head = readAscii(segment0, 0, 20);
-  if (!UNIT_START_RE.test(head)) return null;
+  if (!isUnitMasterStart(head)) return null;
 
   const unitLabel = readAscii(segment0, 0, 10).trim();
   const segment0Text = readAscii(segment0, 0, SEGMENT_BYTES);
@@ -287,7 +298,7 @@ export function parseUnitMasterDat(buffer) {
 
   for (let seg = 0; seg < totalSegments; seg += 1) {
     const head = readAscii(buffer, seg * SEGMENT_BYTES, seg * SEGMENT_BYTES + 20);
-    if (!UNIT_START_RE.test(head)) continue;
+    if (!isUnitMasterStart(head)) continue;
     const parsed = parseUnitBlock(buffer, seg);
     if (parsed) units.push(parsed);
   }

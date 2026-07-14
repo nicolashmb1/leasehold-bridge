@@ -49,8 +49,11 @@ function parseKeyedLedgerLine(tail) {
 function parseRecord(buffer, index) {
   const raw = buffer.subarray(index * RECORD_BYTES, (index + 1) * RECORD_BYTES).toString("ascii");
   const unit = raw.slice(0, 10).trim();
-  const dateMatch = raw.match(/^\s*\d*\s*(\d{2}\/\d{2}\/\d{4})/);
-  const date = dateMatch ? raw.slice(10, 20).trim() : null;
+  // Fixed 10-char unit field; date is always columns 10–19 (MM/DD/YYYY).
+  // Do not require a leading numeric unit for the date match — commercial labels
+  // like STORE1 would otherwise lose the date and drop out of history.
+  const dateField = raw.slice(10, 20).trim();
+  const date = /^\d{2}\/\d{2}\/\d{4}$/.test(dateField) ? dateField : null;
 
   if (!unit || !date) {
     return { unit_label: unit || null, date: null, kind: "unknown", raw };
@@ -229,8 +232,9 @@ export function summarizeTransactionsByUnit(records) {
   const byUnit = new Map();
 
   for (const record of records) {
-    const unit = record.unit_label;
-    if (!unit || !/^\d{3}$/.test(unit)) continue;
+    const unit = String(record.unit_label ?? "").trim();
+    // Apartments (101) and commercial masters (STORE1) — keep bounded.
+    if (!unit || !/^(\d{3}|STORE\d{1,3})$/i.test(unit)) continue;
 
     const existing = byUnit.get(unit) || {
       unit_label: unit,

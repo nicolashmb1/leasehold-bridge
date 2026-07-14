@@ -26,11 +26,9 @@ export function exportPropertySnapshots({ mapping, properaPropertyCode, syncedAt
   const ledgerBuffer = tryReadMirrorFile(mirrorRoot, `${raGroup}R.Dat`);
   const depositSummary = summaryBuffer ? parseDepositSummaryDat(summaryBuffer) : null;
   const depositLedger = ledgerBuffer ? parseDepositLedgerDat(ledgerBuffer) : null;
+  // Full LH label (e.g. STORE1) — do not slice to 3 chars or commercial units collide/miss.
   const unitMasterByLabel = new Map(
-    unitMaster.units.map((unit) => [
-      String(unit.unit_label).trim().slice(0, 3),
-      unit,
-    ])
+    unitMaster.units.map((unit) => [String(unit.unit_label).trim(), unit])
   );
   const depositsByUnit = summarizeDepositsByUnit({
     summaryByUnit: depositSummary?.byUnit ?? null,
