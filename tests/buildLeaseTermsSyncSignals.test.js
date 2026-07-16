@@ -26,6 +26,8 @@ test("buildImportPayload includes lease_terms_sync signals", () => {
   assert.ok(String(first.idempotency_key ?? "").includes(":lease_terms:"));
   assert.ok(first.body?.rent_cents != null);
   assert.ok(Array.isArray(first.body?.charge_lines));
+  assert.ok(Array.isArray(first.body?.parties));
+  assert.equal(first.schema_version, 2);
 });
 
 test("buildLeaseTermsSyncSignals skips vacant units", () => {
@@ -40,4 +42,6 @@ test("buildLeaseTermsSyncSignals skips vacant units", () => {
   assert.equal(signals.length, 1);
   assert.equal(skippedVacant, 1);
   assert.equal(signals[0].unit_label, "101");
+  assert.ok(Array.isArray(signals[0].body.parties));
+  assert.equal(signals[0].body.parties[0].full_name, "Occupied");
 });

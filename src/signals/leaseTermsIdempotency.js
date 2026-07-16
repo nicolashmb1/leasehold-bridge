@@ -21,6 +21,7 @@ export function fingerprintLeaseTermsBody(body) {
     body.tenant_net_rent_cents,
     body.rent_subsidy_cents,
     stableJson(body.charge_lines ?? []),
+    stableJson(body.parties ?? []),
   ];
   return crypto.createHash("sha256").update(parts.join("|")).digest("hex").slice(0, 12);
 }

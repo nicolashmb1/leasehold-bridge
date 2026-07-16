@@ -23,7 +23,7 @@ export function buildLeaseTermsSyncSignals({ facts, propertyCode, syncedAt }) {
     }
 
     signals.push({
-      schema_version: 1,
+      schema_version: 2,
       kind: LEASE_TERMS_SYNC_KIND,
       source_channel: "leasehold_import",
       property_code: property,

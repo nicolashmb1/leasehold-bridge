@@ -1,6 +1,7 @@
 import { parseAccountingAncillaryCharges } from "./accountingLedgerParse.js";
 import { deriveNetRentFromSnapshotPayload } from "./netRentEnrichment.js";
 import { buildPrefilledChargeLines } from "./unitChargePrefill.js";
+import { buildPartiesFromName } from "./leasePartyKey.js";
 
 export const LEASE_TERMS_SYNC_KIND = "lease_terms_sync";
 
@@ -90,6 +91,11 @@ export function buildLeaseTermsBodyFromFact(fact, syncedAt) {
 
   if (hasDeposits) {
     body.deposits_derived_at = syncedAt;
+  }
+
+  const tenantName = String(fact.tenant_name ?? "").trim();
+  if (tenantName) {
+    body.parties = buildPartiesFromName(tenantName);
   }
 
   return { body, hasNetRent, hasDeposits };
