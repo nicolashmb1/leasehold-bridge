@@ -43,6 +43,22 @@ test("buildLeaseTermsBodyFromFact — tenant_name becomes parties[]", () => {
   assert.equal(result.body.parties[0].is_primary, true);
 });
 
+test("buildLeaseTermsBodyFromFact — ALL CAPS tenant_name is title-cased", () => {
+  const result = buildLeaseTermsBodyFromFact(
+    {
+      unit_label: "202",
+      tenant_name: "VALENTINA AMRARILLO HORTIGUERA",
+      rent_cents: 240600,
+      lease_start: "2025-06-01",
+      lease_end: "2026-05-31",
+    },
+    "2026-06-15T12:00:00.000Z"
+  );
+
+  assert.ok(result);
+  assert.equal(result.body.parties[0].full_name, "Valentina Amrarillo Hortiguera");
+});
+
 test("buildLeaseTermsBodyFromFact — explicit zero deposit is included", () => {
   const result = buildLeaseTermsBodyFromFact(
     {
