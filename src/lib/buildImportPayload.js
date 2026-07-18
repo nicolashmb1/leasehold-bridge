@@ -2,6 +2,7 @@
 
 import { buildLeaseTermsSyncSignals } from "../signals/buildLeaseTermsSyncSignals.js";
 import { buildLedgerEventSignals } from "../signals/buildLedgerEventSignals.js";
+import { buildExplicitLifecycleSignals } from "../signals/buildExplicitLifecycleSignals.js";
 import { isLedgerMimicPilotUnit } from "../signals/ledgerMimicPilot.js";
 import {
   shouldFilterSignals,
@@ -69,6 +70,9 @@ export function buildImportPayload(exportResult, options = {}) {
     syncedAt,
     isPilotUnit: isLedgerMimicPilotUnit,
   });
+  const lifecycleBuilt = buildExplicitLifecycleSignals(
+    exportResult?.explicit_lifecycle_events
+  );
 
   let leaseSignals = leaseBuilt.signals;
   let ledgerSignals = ledgerBuilt.signals;
@@ -97,7 +101,7 @@ export function buildImportPayload(exportResult, options = {}) {
     propera_property_code: propertyCode,
     synced_at: syncedAt,
     facts: facts.map(mapFact),
-    signals: [...leaseSignals, ...ledgerSignals],
+    signals: [...leaseSignals, ...ledgerSignals, ...lifecycleBuilt.signals],
     delta_meta: {
       pilot: isSyncDeltaPilotProperty(propertyCode),
       filtering: shouldFilterSignals(propertyCode, propertyCursor),
@@ -105,6 +109,8 @@ export function buildImportPayload(exportResult, options = {}) {
       skipped_ledger_known: skippedLedgerKnown,
       lease_signal_count: leaseSignals.length,
       ledger_signal_count: ledgerSignals.length,
+      lifecycle_signal_count: lifecycleBuilt.signals.length,
+      lifecycle_rejected: lifecycleBuilt.rejected,
       unit_delta_map: unitDeltaMapFromExport,
     },
   };

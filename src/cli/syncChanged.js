@@ -235,6 +235,7 @@ try {
         deltaFiltering: payload.delta_meta?.filtering ?? false,
         leaseSignals: payload.delta_meta?.lease_signal_count ?? 0,
         ledgerSignals: payload.delta_meta?.ledger_signal_count ?? 0,
+        lifecycleSignals: payload.delta_meta?.lifecycle_signal_count ?? 0,
       });
       continue;
     }
@@ -268,9 +269,14 @@ try {
         skippedLedgerKnown: payload.delta_meta?.skipped_ledger_known ?? 0,
         leaseSignals: payload.delta_meta?.lease_signal_count ?? 0,
         ledgerSignals: payload.delta_meta?.ledger_signal_count ?? 0,
+        lifecycleSignals: payload.delta_meta?.lifecycle_signal_count ?? 0,
+        lifecycleAccepted: result?.lifecycleAccepted ?? 0,
+        lifecycleDuplicate: result?.lifecycleDuplicate ?? 0,
       });
       console.log(
-        `[sync-changed] ${code}: OK — ${result?.upserted ?? payload.facts.length} units`
+        `[sync-changed] ${code}: OK — ${result?.upserted ?? payload.facts.length} units; ` +
+          `${result?.lifecycleAccepted ?? 0} lifecycle accepted, ` +
+          `${result?.lifecycleDuplicate ?? 0} duplicate`
       );
     } catch (err) {
       failed += 1;
