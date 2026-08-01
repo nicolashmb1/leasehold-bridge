@@ -8,9 +8,10 @@
 ## Start here (mandatory)
 
 1. **`../propera-app/docs/OFFICE_AGENT_HANDOFF.md`** — **current state, pull commands, verify SQL, what's shipped, what's next.** Read this before changing bridge or sync logic.
-2. **`../propera-app/docs/WESTFIELD_TENANT_NAMES_AND_REPORTS.md`** — **2026-06-25:** parser name fix, PDF reports, roster vs leaseholder, office verify steps.
-3. **`../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md`** — locked intent: bridge = actor, baseline + deltas, silence ≠ deletion.
-4. **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`** — signal shapes (when D: or GitHub available).
+2. **`../PROPERA_LH_STRICT_ACTOR_PATHS.md`** — **finance thread (2026-07-31):** strict LH actor, path matrix, baseline vs forward. Stream 2 (`A*TR` checks) not wired yet; tenant Stream 1 mostly done. **Next: T7 allocation replay** (propera-v2/app — no bridge change).
+3. **`../propera-app/docs/WESTFIELD_TENANT_NAMES_AND_REPORTS.md`** — **2026-06-25:** parser name fix, PDF reports, roster vs leaseholder, office verify steps.
+4. **`../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md`** — locked intent: bridge = actor, baseline + deltas, silence ≠ deletion.
+5. **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`** — signal shapes (when D: or GitHub available).
 
 ---
 
