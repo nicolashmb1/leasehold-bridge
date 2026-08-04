@@ -110,7 +110,7 @@ Owner-confirmed 2026-08-01. Engel, Press and Cohen are **partners receiving inte
 | `5216` | Cleaning service | ANA MUNAR, SOHO STEAM |
 | `5300` | Management fee | GRAND MANAGEMENT GROUP |
 | `5301` | Accounting | LOU GOLD CPA |
-| `5305` | Payroll / treasury | UNITED STATES TREASURY |
+| `5305` | **Lic & Permits** ~~Payroll / treasury~~ | **Corrected 2026-08-03** — Leasehold's own label at all five buildings. The old entry was inferred from the payee `UNITED STATES TREASURY` and was wrong; most payees are municipal (CITY OF ELIZABETH, UNION COUNTY, SOMERSET SOIL CONSERVATION, NJ DOT). Real payroll is `5103` / `5111`. See §6A.7 |
 | `5307` | Misc administrative | |
 | `5309` | R.E. commission | |
 | `5310` | Fire alarm | H&J SECURITY |
@@ -276,9 +276,77 @@ MORRIS: 2,398 records, 2,106 money lines, 292 batches, Jan 2023 → Jun 2026, **
 >
 > **Contains live bank account numbers. Never print, log, or commit them.** Any importer must treat this as the most sensitive file in the mirror.
 
-### 6A.6 Not yet decoded
+### 6A.6 `RA####VA.DAT` — AP voucher register (decoded 2026-08-03)
 
-`A<prefix>TR.DAT` (MORRIS 942,832 B) and the `RA####*` family beyond the deposit/lease parsers the bridge already has.
+**159-byte records, 2,443 for MORRIS (388 KB — larger than the live tenant history).** Records come in pairs: an `I` invoice followed by its `P####` payment voucher.
+
+| Offset | Len | Field |
+|---:|---:|---|
+| 0 | 5 | Account token — always `99999` |
+| 5 | 10 | Date `MM/DD/YYYY` |
+| 15 | ~21 | Description — **empty on 2,437 of 2,443 records** |
+| ~36 | ~11 | Invoice amount (on `I` rows) |
+| ~47 | ~11 | Payment amount (on `P` rows) |
+| ~58 | ~11 | `I`, or `P` + voucher number |
+| ~69 | 1 | `V` = voided |
+
+**Reconciles exactly against the GL.** MORRIS 2026: 156 payments totalling **1,401,635.96** — the same count and the same cent as the GL's `APE` cheques. All three voids match: `P2955`/500.00, `P2960`/100,008.18, `P2969`/8,423.93 = the GL's `VCE2955`/`VCE2960`/`VCE2969` and their 108,932.11.
+
+> **Do not build the disbursement importer from this file.** It carries no payee and no expense account — the description field is blank on 99.8% of records. The GL year file has both, plus the same amounts and refs. **`A<prefix>GL.Y##` remains the source for money out.**
+
+**What it is uniquely good for:** the voucher sequence runs `P1801 → P2995` unbroken, with voids flagged. That is the authority for **which cheque numbers have been used, and which were spoiled** — exactly what §4.5 / parity task 11 needs for check stock as a range. `next_check_number` is a counter; this is the register.
+
+Also unique: the 1,223 `I` rows are the invoice side, paired to each payment. In every sampled pair the invoice and payment dates are identical, so this looks like a bookkeeping pair rather than a real bill-received date — verify before treating it as an obligation source.
+
+### 6A.7 `A<prefix>TR.DAT` — the transaction register, and the authoritative account map (decoded 2026-08-03)
+
+**88-byte records**, phase 0. MORRIS holds 11,462. Every line carries the payee, **Leasehold's own category label**, and the account code:
+
+| Offset | Len | Field |
+|---:|---:|---|
+| 8 | 30 | Payee name |
+| 38 | 25 | **Category label** (`Exterminating`, `Lic & Permits`) |
+| 63 | 4 | **Account code** |
+| 67 | 8 | Amount (Currency) |
+
+**This is the account map's authority.** §5 records that two codes shipped wrong in migration **164** because they were read from a *photograph* of the GL print with the left column cut off. This file removes the guesswork: it is Leasehold stating its own label next to its own code, on every transaction.
+
+**All 35 expense codes carry byte-identical labels at all five buildings** — the strongest confirmation yet of the 2026-08-01 decision that `5xxx` is portfolio-wide while `1xxx` is property-specific.
+
+| Code | Label | Bldgs | Code | Label | Bldgs |
+|---|---|---:|---|---|---:|
+| 5100 | RE Taxes | 5 | 5211 | Sec Interest | 1 |
+| 5101 | Water & Sewer | 5 | 5212 | Repairs | **5** |
+| 5102 | Insurance | 5 | 5213 | LANDSCAPING | 5 |
+| 5103 | Payroll | 1 | 5215 | Supplies | 5 |
+| 5107 | Gas & Electric | 1 | 5216 | Cleaning Servc | 5 |
+| 5110 | Utilities | 5 | 5217 | Maintenance | 3 |
+| 5111 | Super Payroll | 1 | 5300 | Mgmt Fee | 5 |
+| 5200 | Building Repair | 5 | 5301 | Accounting Fee | **5** |
+| 5202 | Elev Contract | 5 | 5302 | Consultants | 4 |
+| 5203 | Exterminating | 5 | 5305 | **Lic & Permits** | **5** |
+| 5204 | Paint & Plaster | 3 | 5306 | Bank Charges | 1 |
+| 5205 | Plumbing Repair | 1 | 5307 | Misc. Administ | 5 |
+| 5206 | Electric Repair | 1 | 5309 | R.E.COMMISSION | 5 |
+| 5207 | Apt Repair | 5 | 5310 | FIRE ALARM | 5 |
+| 5208 | Appliance Repr | 5 | 5311 | LEGAL FEE | 5 |
+| 5210 | Hardware/Supply | 3 | 5312 | Super Reimburse | 4 |
+| | | | 5313 | Advertising | 5 |
+| | | | 5314 | Misc Expense | 5 |
+| | | | 5400 | Interest Exp | 5 |
+
+**What this changed:**
+
+1. **F-09 was missing 14 codes.** Four are portfolio-wide and material: `5212 Repairs`, `5301 Accounting Fee`, `5302 Consultants` and `5305 Lic & Permits` (118 lines). Added — F-09 now covers all 35.
+2. **§3 had `5305` wrong** — "Payroll / treasury", inferred from one payee. Corrected above.
+3. **Migration 168's corrections are confirmed right** — `5202` is Elev Contract (not exterminating), `5203` is Exterminating, `5207` is Apt Repair.
+4. **`5205` is a real code, not a phantom.** §5 flagged it as a misread of `5207`, which it was — but `5205` independently exists as **Plumbing Repair**. Deleting it as an error would have lost a live category.
+
+`TR.DAT` is also a fuller register than the GL year files: tenant charges, capital injections and cheques all appear per transaction, where the GL shows income only as a month-end aggregate. Not yet exploited.
+
+### 6A.8 Not yet decoded
+
+The rest of the `RA####*` family beyond the deposit/lease parsers the bridge already has.
 
 ---
 
