@@ -4,7 +4,9 @@
 **Why this exists:** the bridge parses tenant rent ledgers and deposit *balances*. It does **not** read the general ledger. The GL year files turned out to hold the double-entry history — including the deposit subledger — that Propera needs for F-08 and the GL print.
 **Read with:** [`PROPERA_FINANCE_DEPOSITS.md`](../../propera-v2/docs/PROPERA_FINANCE_DEPOSITS.md) · [`PROPERA_GRAND_FINANCIAL_PARITY.md`](../../PROPERA_GRAND_FINANCIAL_PARITY.md)
 
-> **No importer has been written.** This document is the analysis. Nothing in the bridge or Propera reads these files yet.
+> **Start here if you are looking for move-in or move-out.** Leasehold has no field for either. §6.5 lists the four markers that do exist and which to lead with — the move-out one is a *refund cheque*, which is why searching for a status flag has failed twice.
+
+> **No importer has been written for deposits.** This document is the analysis. Money out now has one — see `src/signals/buildDisbursementSignals.js`.
 
 ---
 
@@ -193,7 +195,7 @@ Tested against Propera's `unit_leases` deposit columns:
 
 Move-out refunds frequently post as `APE` checks against the tenant, not as 2030 debits per unit. A unit that has turned over shows the sum of every tenancy. Unit 318 carries $20,075 across four tenancies; the sitting tenant's deposit is $5,500.
 
-**LH books a new move-in security deposit under `VACANT #nnn`, and only the key deposit under the tenant's name.** That `VACANT` posting is the reliable move-in marker.
+**LH books a new move-in security deposit under `VACANT #nnn`, and only the key deposit under the tenant's name.** That `VACANT` posting is exact where it appears — but it appears for only about half of turnovers, so it confirms a boundary rather than finding one. **See §6.5 for the four markers and which to lead with.**
 
 Propera's own dates cannot substitute: `unit_leases.lease_start` is the current *renewal* date (91 PENN units cluster on 2026-05-01), and all 92 `unit_occupancies.started_at` values fall inside 2024-05…2026-08 because they were seeded at import. **Propera does not currently know when anyone moved in; the GL does.** Worth fixing independently of deposits.
 
@@ -212,6 +214,72 @@ Propera's own dates cannot substitute: `unit_leases.lease_start` is the current 
 **Unit 509 — a two-year-old un-reversed error in LH.** FAJARDO H's deposit of 4,015.00 was posted to #509 on 2024-02-24, then re-posted to their real unit **#517** on 2024-03-11. The #509 side was never reversed. The owner confirms 509 has only ever had one occupancy. COSTA CORDEIRO's 4,667.00 matches Propera exactly.
 
 **Conclusion: Propera's balances (from R.Dat "balance on file") are more reliable than the 2030 account totals**, because the account accumulates un-reversed errors. Design accordingly — **balances are authority for what is held; the GL is authority for how it moved; the importer reconciles the two and reports the difference.** The 4,015 on 509 is exactly what an exceptions schedule should surface.
+
+---
+
+### 6.5 Tenancy boundaries — how to tell when someone moved in or out (2026-08-03)
+
+**Leasehold has no field called "move-out".** It has been searched for twice and not found, because the event is not labelled — it is recorded as a **refund cheque**. Anyone looking for a status flag or a date column will keep coming up empty. Do not look again; use the four markers below.
+
+This matters because Leasehold **erases a tenant's transaction history at move-out** (§6.6), so "the whole history for the current tenant" means finding where the current tenancy begins.
+
+#### The four markers
+
+**1. `VACANT #nnn` on `SRESECU` — move-in. Exact.**
+
+A new tenancy's security deposit is booked under `VACANT #<unit>` rather than the tenant's name; the key deposit on the same day carries the real name.
+
+```
+2024-09-27  SRESECU  5,137.50  VACANT #314        <- the tenancy begins
+2024-09-27  SREKEY     200.00  ALEGRIA R #314     <- and here is who
+```
+
+Verified against ledger-history start dates for MORRIS: **5 of 5 exact, to the day.** But only 6 exist across MORRIS's whole history against ~12 turnovers, so it is **exact when present and incomplete overall** — a confirmation, not a search key.
+
+**2. A deposit refund — move-out, with the departing tenant's name.**
+
+A debit to `2030` paid by an `APE` cheque. This is the move-out signal:
+
+```
+2024-09-27  APE2469  1,872.50  RAMONE SAMUEL CHRISTIE
+2025-10-27  APE2781  5,057.36  INGRID JHOANNA BARBOSA
+2026-02-26  APE2875  1,440.09  JUAN SEBASTIAN BAUTISTA
+```
+
+12 for MORRIS. In the cheque register these are indistinguishable from ordinary AP disbursements — **the counterpart account `2030` is what identifies them**, exactly as §5 warns for expense categories. Note the refund often post-dates the next tenancy: unit 313's refund is a week *after* its `VACANT`.
+
+**3. The ledger history restart — the most complete boundary.**
+
+A unit's records in `RA####H.Dat` begin at the **current** tenant's move-in, because Leasehold clears them at turnover. This is Leasehold's own definition of the tenancy and covers every unit, so it is the **primary** signal.
+
+**4. The name on the deposit line changes.**
+
+`2030` rows carry `SURNAME #UNIT`. A change of surname on a unit is a boundary even where no `VACANT` row exists:
+
+```
+2024-10-19  SRESECU  5,990.00  BARBOSA BELTRAN #307
+2025-10-27  SRESECU  4,342.50  CALERO #307        <- 307's ledger restarts this day
+```
+
+#### How to use them
+
+**Primary: the ledger history start date.** Cross-check against the other three. **Where they disagree, report it — never resolve it silently.** A unit whose ledger restarts with no refund, no `VACANT` and no name change is a question for a person; an importer guessing there will attach a previous tenant's money to the current one.
+
+For MORRIS every deposit lands on the **same day** as the ledger start — no grace window was needed. Allow a small one for other buildings, and flag any unit that relies on it.
+
+> **The 495 admin-fee pattern** (owner, 2026-08-03) — a new tenancy often shows an admin fee around 495 alongside the larger security and key deposits. Useful corroboration on newer buildings, unreliable on older ones. Treat as a hint that raises confidence, never as a boundary on its own.
+
+### 6.6 Move-out destroys the tenant ledger — but not the GL
+
+Confirmed on MORRIS 2026-08-03. A unit's ledger in `RA####H.Dat` starts at the sitting tenant's move-in: 34 MORRIS units reach back to 2020-11, while 206 starts 2026-02-26 and 417 at 2026-01-23. The GL keeps the money forever as a monthly aggregate; the per-tenant detail is gone.
+
+**Unit 313 is the control.** It turned over on 2026-07-27, three weeks *after* Propera's 2026-07-02 import, so Propera still holds the departed tenant's 27 payments that Leasehold has since destroyed.
+
+**Consequences:**
+
+1. Any import sourced from tenant history is missing whoever moved out since. MORRIS was short **12,335.88 / 5,862.25 / 2,772.29 / 2,520.34** for Nov–Feb and exact from March, tracking turnovers before the import.
+2. **Backfill cannot tie for past periods.** Opening balance at a cutover date only.
+3. **Running the bridge continuously is urgent, not convenient.** Every turnover before it runs destroys history permanently, and Propera is the only place it will survive.
 
 ---
 
