@@ -12,6 +12,7 @@ import { toProperaFinancialFacts } from "../normalize/toProperaFinancialFacts.js
 import { parseGlYearFile } from "../parsers/parseGlYearFile.js";
 import { buildDisbursementSignals } from "../signals/buildDisbursementSignals.js";
 import { buildDepositSignals } from "../signals/buildDepositSignals.js";
+import { isMoneyPathPilotProperty } from "../signals/moneyPathPilot.js";
 
 /**
  * Money out and deposits come from the GL year files, not the tenant files the
@@ -23,6 +24,11 @@ import { buildDepositSignals } from "../signals/buildDepositSignals.js";
  * costs time rather than correctness. Narrow it if it starts to hurt.
  */
 function buildMoneyPathSignals({ mirrorRoot, property, propertyCode, stream }) {
+  // One building at a time. See moneyPathPilot.js for what adding one costs.
+  if (!isMoneyPathPilotProperty(propertyCode)) {
+    return { signals: [], problems: [], meta: { skipped: "not_a_money_path_pilot_property" } };
+  }
+
   const prefix = property?.leasehold_accounting_prefix;
   if (!prefix) return { signals: [], problems: [], meta: { skipped: "no_accounting_prefix" } };
 
