@@ -101,7 +101,14 @@ export function buildImportPayload(exportResult, options = {}) {
     propera_property_code: propertyCode,
     synced_at: syncedAt,
     facts: facts.map(mapFact),
-    signals: [...leaseSignals, ...ledgerSignals, ...lifecycleBuilt.signals],
+    // Money out and deposits ride the same envelope. Propera routes by kind and
+    // now reports anything it does not recognise rather than dropping it.
+    signals: [
+      ...leaseSignals,
+      ...ledgerSignals,
+      ...lifecycleBuilt.signals,
+      ...(exportResult?.money_path_signals ?? []),
+    ],
     delta_meta: {
       pilot: isSyncDeltaPilotProperty(propertyCode),
       filtering: shouldFilterSignals(propertyCode, propertyCursor),
@@ -113,5 +120,7 @@ export function buildImportPayload(exportResult, options = {}) {
       lifecycle_rejected: lifecycleBuilt.rejected,
       unit_delta_map: unitDeltaMapFromExport,
     },
+    money_path_meta: exportResult?.money_path_meta ?? null,
+    money_path_problems: exportResult?.money_path_problems ?? [],
   };
 }
