@@ -5,6 +5,22 @@
 
 ---
 
+## ⇒ CURRENT THREAD (2026-08-05): the money path
+
+**Read [`../propera-v2/docs/MONEY_PATH_HANDOFF.md`](../propera-v2/docs/MONEY_PATH_HANDOFF.md) before changing signal builders or the export.**
+
+This repo now sends **money out and deposits** as well as tenant ledger events — `buildDisbursementSignals.js` and `buildDepositSignals.js`, both from the GL year files, which are the permanent book. Verified against MORRIS: 642 cheques, 30 voids, 185 deposits, zero problems.
+
+**Gated to MORRIS only** — `config/money-path-pilot.json`. The office syncs all five buildings and the money path runs per property, so adding one without seeding its payee map and its property-scoped account map will auto-create hundreds of vendor records and fail its `1xxx` cheques. A missing config reads as *off*.
+
+**The office pulls `origin master`** for this repo and propera-app, hard-coded in `propera-app/scripts/run-office-pull-and-sync.mjs`. Work on a branch is invisible to the office until merged.
+
+Two things worth knowing before you dig: **move-out is a refund cheque**, not a status field — it has been searched for twice and not found; see [`docs/LH_GL_FILE_FORMAT.md`](./docs/LH_GL_FILE_FORMAT.md) §6.5 for the four tenancy markers. And **Leasehold erases a tenant's history at move-out** (§6.6), which is why running this bridge continuously is urgent rather than convenient.
+
+**Known gap:** `summarizeTransactionsByUnit` caps at the last **12 payments / 80 records per unit**. Harmless on a frequent sync; a catch-up run after an outage silently drops the oldest. Fix before continuous sync.
+
+---
+
 ## Start here (mandatory)
 
 1. **`../propera-app/docs/OFFICE_AGENT_HANDOFF.md`** — **current state, pull commands, verify SQL, what's shipped, what's next.** Read this before changing bridge or sync logic.
