@@ -12,6 +12,7 @@ import { toProperaFinancialFacts } from "../normalize/toProperaFinancialFacts.js
 import { parseGlYearFile } from "../parsers/parseGlYearFile.js";
 import { buildDisbursementSignals } from "../signals/buildDisbursementSignals.js";
 import { buildDepositSignals } from "../signals/buildDepositSignals.js";
+import { buildBankDepositBatchSignals } from "../signals/buildBankDepositBatchSignals.js";
 import { isMoneyPathPilotProperty } from "../signals/moneyPathPilot.js";
 
 /**
@@ -58,17 +59,24 @@ function buildMoneyPathSignals({ mirrorRoot, property, propertyCode, stream }) {
   const disbursements = buildDisbursementSignals(records, { propertyCode });
   const deposits = buildDepositSignals(records, { propertyCode, tenancyStarts, graceDays: 3 });
 
+  // Bank deposit slips live in A*D.Dat (not the GL). End-Batch# → same
+  // deposit_batches table staff create slips into.
+  const registerBuf = tryReadMirrorFile(mirrorRoot, `${prefix}D.Dat`);
+  const bankBatches = buildBankDepositBatchSignals(registerBuf, { propertyCode });
+
   return {
-    signals: [...disbursements.signals, ...deposits.signals],
-    problems: [...disbursements.problems, ...deposits.problems],
+    signals: [...disbursements.signals, ...deposits.signals, ...bankBatches.signals],
+    problems: [...disbursements.problems, ...deposits.problems, ...bankBatches.problems],
     meta: {
       years_read: yearsRead,
       gl_record_count: records.length,
       disbursement_signal_count: disbursements.signals.length,
       deposit_signal_count: deposits.signals.length,
+      bank_batch_signal_count: bankBatches.signals.length,
       // Never silently dropped: a cheque with no destination or a unit whose
       // tenancy boundary is ambiguous is reported for a person to resolve.
-      problem_count: disbursements.problems.length + deposits.problems.length,
+      problem_count:
+        disbursements.problems.length + deposits.problems.length + bankBatches.problems.length,
     },
   };
 }
