@@ -47,6 +47,24 @@ export function isMoneyPathPilotProperty(propertyCode) {
   return allowed.map((p) => String(p).trim().toUpperCase()).includes(code);
 }
 
+/**
+ * YYYY-MM-DD floor for bank_deposit_batch signals (End-Batch#).
+ * Must match Propera cash_live_from for that property. Missing → no batches
+ * (fail closed; do not emit full D.Dat history).
+ * @param {string} propertyCode
+ * @returns {string|null}
+ */
+export function bankBatchFromDate(propertyCode) {
+  const cfg = loadConfig();
+  const code = String(propertyCode ?? "").trim().toUpperCase();
+  if (!code) return null;
+  const map = cfg?.bank_batch_from && typeof cfg.bank_batch_from === "object" ? cfg.bank_batch_from : null;
+  if (!map) return null;
+  const raw = map[code] ?? map[propertyCode];
+  const s = String(raw ?? "").trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
 export function resetMoneyPathPilotConfigCache() {
   cached = null;
 }

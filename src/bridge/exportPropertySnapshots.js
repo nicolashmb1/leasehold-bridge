@@ -13,7 +13,7 @@ import { parseGlYearFile } from "../parsers/parseGlYearFile.js";
 import { buildDisbursementSignals } from "../signals/buildDisbursementSignals.js";
 import { buildDepositSignals } from "../signals/buildDepositSignals.js";
 import { buildBankDepositBatchSignals } from "../signals/buildBankDepositBatchSignals.js";
-import { isMoneyPathPilotProperty } from "../signals/moneyPathPilot.js";
+import { bankBatchFromDate, isMoneyPathPilotProperty } from "../signals/moneyPathPilot.js";
 
 /**
  * Money out and deposits come from the GL year files, not the tenant files the
@@ -59,10 +59,13 @@ function buildMoneyPathSignals({ mirrorRoot, property, propertyCode, stream }) {
   const disbursements = buildDisbursementSignals(records, { propertyCode });
   const deposits = buildDepositSignals(records, { propertyCode, tenancyStarts, graceDays: 3 });
 
-  // Bank deposit slips live in A*D.Dat (not the GL). End-Batch# → same
-  // deposit_batches table staff create slips into.
+  // Bank deposit slips live in A*D.Dat (not the GL). End-Batch# →
+  // createDepositBatch (same actor path as staff). Cutover only — not full history.
   const registerBuf = tryReadMirrorFile(mirrorRoot, `${prefix}D.Dat`);
-  const bankBatches = buildBankDepositBatchSignals(registerBuf, { propertyCode });
+  const bankBatches = buildBankDepositBatchSignals(registerBuf, {
+    propertyCode,
+    sinceDate: bankBatchFromDate(propertyCode),
+  });
 
   return {
     signals: [...disbursements.signals, ...deposits.signals, ...bankBatches.signals],

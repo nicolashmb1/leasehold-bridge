@@ -38,7 +38,10 @@ describe("buildBankDepositBatchSignals", () => {
       makeRecord("06/05/2026", "End-Batch# 54", 0),
     ];
     const buf = Buffer.concat(parts);
-    const out = buildBankDepositBatchSignals(buf, { propertyCode: "MORRIS" });
+    const out = buildBankDepositBatchSignals(buf, {
+      propertyCode: "MORRIS",
+      sinceDate: "2026-03-01",
+    });
     assert.equal(out.signals.length, 1);
     const s = out.signals[0];
     assert.equal(s.kind, "bank_deposit_batch");
@@ -46,6 +49,27 @@ describe("buildBankDepositBatchSignals", () => {
     assert.equal(s.body.members.length, 2);
     assert.equal(s.body.total_cents, 305586 + 316844);
     assert.equal(s.idempotency_key, "leasehold:MORRIS:bank_batch:54");
+  });
+
+  it("omits batches before cutover and refuses full history without sinceDate", () => {
+    const parts = [
+      makeRecord("02/01/2026", "411  1", 100.0),
+      makeRecord("02/01/2026", "End-Batch# 10", 0),
+      makeRecord("03/05/2026", "209  2", 50.0),
+      makeRecord("03/05/2026", "End-Batch# 11", 0),
+    ];
+    const buf = Buffer.concat(parts);
+    const cut = buildBankDepositBatchSignals(buf, {
+      propertyCode: "MORRIS",
+      sinceDate: "2026-03-01",
+    });
+    assert.equal(cut.signals.length, 1);
+    assert.equal(cut.signals[0].body.batch_number, 11);
+    assert.equal(cut.meta.skipped_pre_cutover, 1);
+
+    const noSince = buildBankDepositBatchSignals(buf, { propertyCode: "MORRIS" });
+    assert.equal(noSince.signals.length, 0);
+    assert.equal(noSince.meta.skipped, "bank_batch_from_required");
   });
 
   it("groups via parse + group helpers", () => {

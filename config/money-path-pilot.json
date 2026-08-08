@@ -1,5 +1,8 @@
 {
-  "_comment": "Which properties send money-out and deposit signals. MORRIS first, proven end to end, then expand. Adding a property here without seeding its payee map and its property-specific 1xxx account map will auto-create vendor records and throw unmapped-account errors — see PROPERA_GRAND_FINANCIAL_PARITY.md and propera-v2/docs/PROPERA_FINANCE_PROPERTY_CASH.md.",
+  "_comment": "Which properties send money-out and deposit signals. MORRIS first, proven end to end, then expand. Adding a property here without seeding its payee map and its property-specific 1xxx account map will auto-create vendor records and throw unmapped-account errors — see PROPERA_GRAND_FINANCIAL_PARITY.md and propera-v2/docs/PROPERA_FINANCE_PROPERTY_CASH.md. bank_batch_from must match property_bank_accounts.cash_live_from — End-Batch# signals only from that date forward; V2 also enforces cash_live_from on the actor path.",
   "enabled": true,
-  "properties": ["MORRIS"]
+  "properties": ["MORRIS"],
+  "bank_batch_from": {
+    "MORRIS": "2026-03-01"
+  }
 }

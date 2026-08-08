@@ -42,7 +42,9 @@ function envelope(propertyCode, batch) {
 
 /**
  * @param {Buffer|null|undefined} registerBuffer A*D.Dat
- * @param {{ propertyCode: string }} opts
+ * @param {{ propertyCode: string, sinceDate?: string|null }} opts
+ *   sinceDate = YYYY-MM-DD cutover (cash_live_from). Pre-cutover batches omitted —
+ *   Propera also enforces this; bridge filter keeps the import payload small.
  */
 export function buildBankDepositBatchSignals(registerBuffer, opts) {
   const propertyCode = String(opts?.propertyCode || "").trim();
@@ -50,10 +52,32 @@ export function buildBankDepositBatchSignals(registerBuffer, opts) {
     return { signals: [], problems: [], meta: { skipped: "no_register" } };
   }
 
+  const sinceDate = String(opts?.sinceDate || "").trim().slice(0, 10);
+  const sinceOk = /^\d{4}-\d{2}-\d{2}$/.test(sinceDate) ? sinceDate : null;
+
   const parsed = parseDepositRegisterDat(registerBuffer);
   const batches = groupDepositRegisterBatches(parsed.records);
+
+  // Fail closed: no cutover date → emit nothing (never dump full D.Dat history).
+  if (!sinceOk) {
+    return {
+      signals: [],
+      problems: [],
+      meta: {
+        register_record_count: parsed.record_count,
+        batch_count: batches.length,
+        signal_count: 0,
+        skipped_pre_cutover: batches.length,
+        since_date: null,
+        skipped: "bank_batch_from_required",
+        problem_count: 0,
+      },
+    };
+  }
+
   const signals = [];
   const problems = [];
+  let skippedPreCutover = 0;
 
   for (const batch of batches) {
     if (!batch.batch_number || batch.batch_number <= 0) {
@@ -62,6 +86,10 @@ export function buildBankDepositBatchSignals(registerBuffer, opts) {
     }
     if (!batch.deposit_date) {
       problems.push({ batch_number: batch.batch_number, problem: "missing_deposit_date" });
+      continue;
+    }
+    if (String(batch.deposit_date).slice(0, 10) < sinceOk) {
+      skippedPreCutover += 1;
       continue;
     }
     signals.push(envelope(propertyCode, batch));
@@ -74,6 +102,8 @@ export function buildBankDepositBatchSignals(registerBuffer, opts) {
       register_record_count: parsed.record_count,
       batch_count: batches.length,
       signal_count: signals.length,
+      skipped_pre_cutover: skippedPreCutover,
+      since_date: sinceOk,
       problem_count: problems.length,
     },
   };
