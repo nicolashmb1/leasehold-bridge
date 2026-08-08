@@ -228,12 +228,23 @@ export function parseTransactionStream(buffer) {
   };
 }
 
+/**
+ * Group the transaction stream by unit for export → ledger event signals.
+ *
+ * History: this used to keep only the last 12 payments / 80 dated rows per unit.
+ * That was payload hygiene and silently dropped older lines on catch-up after an
+ * outage — the same class of loss as Leasehold erasing tenant history at move-out.
+ * Propera idempotency (and delta ledgerKeys) handle duplicates; do not truncate here.
+ *
+ * Field names `recent_payments` / `recent_posted` are historical; they hold the
+ * full per-unit lists from the stream (apartments + STORE*).
+ */
 export function summarizeTransactionsByUnit(records) {
   const byUnit = new Map();
 
   for (const record of records) {
     const unit = String(record.unit_label ?? "").trim();
-    // Apartments (101) and commercial masters (STORE1) — keep bounded.
+    // Apartments (101) and commercial masters (STORE1).
     if (!unit || !/^(\d{3}|STORE\d{1,3})$/i.test(unit)) continue;
 
     const existing = byUnit.get(unit) || {
@@ -253,17 +264,11 @@ export function summarizeTransactionsByUnit(records) {
 
     if (record.date) {
       existing.recent_posted.push(record);
-      if (existing.recent_posted.length > 80) {
-        existing.recent_posted = existing.recent_posted.slice(-80);
-      }
     }
 
     if (record.kind === "payment" && record.amount_dollars != null) {
       existing.last_payment = record;
       existing.recent_payments.push(record);
-      if (existing.recent_payments.length > 12) {
-        existing.recent_payments = existing.recent_payments.slice(-12);
-      }
     }
 
     byUnit.set(unit, existing);
@@ -281,9 +286,6 @@ export function summarizeTransactionsByUnit(records) {
     );
     if (!alreadyIncluded) {
       existing.recent_posted.push(last);
-      if (existing.recent_posted.length > 81) {
-        existing.recent_posted = existing.recent_posted.slice(-81);
-      }
     }
   }
 

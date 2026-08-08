@@ -7,7 +7,13 @@ import { buildLedgerEventIdempotencyKey, lhPostedRowToSignalKind } from "../sign
 
 const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PILOT_CONFIG_PATH = path.join(PACKAGE_ROOT, "config", "sync-delta-pilot.json");
-const MAX_LEDGER_KEYS_PER_UNIT = 120;
+/**
+ * Formerly capped at 120 keys/unit so the cursor stayed small next to the
+ * summarizeTransactionsByUnit 12/80 trim. That pair meant catch-up could both
+ * drop emission AND forget that older lines were already imported. Keep every
+ * key we have seen; Set + JSON size is fine for Grand-scale units.
+ */
+const MAX_LEDGER_KEYS_PER_UNIT = Number.POSITIVE_INFINITY;
 
 let pilotConfigCache = null;
 
@@ -173,10 +179,15 @@ export function buildUnitDeltaMapFromFacts({ facts, propertyCode, syncedAt }) {
       const key = ledgerKeyFromPostedRow(property, unitLabel, row);
       if (key) keys.push(key);
     }
-    units[unitLabel].ledgerKeys = keys.slice(-MAX_LEDGER_KEYS_PER_UNIT);
+    units[unitLabel].ledgerKeys = trimLedgerKeys(keys);
   }
 
   return units;
+}
+
+function trimLedgerKeys(keys) {
+  if (!Number.isFinite(MAX_LEDGER_KEYS_PER_UNIT)) return [...keys];
+  return keys.slice(-MAX_LEDGER_KEYS_PER_UNIT);
 }
 
 /**
@@ -196,7 +207,7 @@ export function mergePropertyDeltaCursor(propertyCursor, unitMap, opts = {}) {
     for (const key of next.ledgerKeys ?? []) {
       ledgerSet.add(key);
     }
-    const ledgerKeys = [...ledgerSet].slice(-MAX_LEDGER_KEYS_PER_UNIT);
+    const ledgerKeys = trimLedgerKeys([...ledgerSet]);
 
     mergedUnits[unitLabel] = {
       leaseTermsFp: next.leaseTermsFp ?? prevUnit.leaseTermsFp,

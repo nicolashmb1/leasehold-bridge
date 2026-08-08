@@ -25,8 +25,39 @@ test("summarizeTransactionsByUnit tracks last payment for unit 101", () => {
   const unit101 = summary.get("101");
   assert.ok(unit101?.last_payment);
   assert.equal(unit101.last_payment.kind, "payment");
-  assert.equal(unit101.last_payment.date, "06/03/2026");
-  assert.equal(unit101.last_payment.amount_dollars, 1438.22);
+  // Mirror advances; last payment is the last payment row in stream order for 101.
+  const streamLastPayment = [...parsed.records]
+    .reverse()
+    .find((r) => r.unit_label === "101" && r.kind === "payment" && r.amount_dollars != null);
+  assert.ok(streamLastPayment);
+  assert.equal(unit101.last_payment.date, streamLastPayment.date);
+  assert.equal(unit101.last_payment.amount_dollars, streamLastPayment.amount_dollars);
+});
+
+test("summarizeTransactionsByUnit keeps more than the old 12-payment / 80-row caps", () => {
+  const records = [];
+  for (let i = 1; i <= 100; i += 1) {
+    const mm = String(((i - 1) % 12) + 1).padStart(2, "0");
+    const dd = String(((i - 1) % 28) + 1).padStart(2, "0");
+    const yyyy = String(2020 + Math.floor((i - 1) / 12));
+    records.push({
+      unit_label: "101",
+      date: `${mm}/${dd}/${yyyy}`,
+      kind: i % 3 === 0 ? "billing" : "payment",
+      amount_dollars: 1000 + i,
+      balance_after_dollars: i,
+      description: i % 3 === 0 ? "RENT" : `CHK ${i}`,
+      reference: String(i),
+    });
+  }
+  const summary = summarizeTransactionsByUnit(records);
+  const unit = summary.get("101");
+  assert.ok(unit);
+  assert.equal(unit.recent_posted.length, 100, "all dated rows retained");
+  const paymentCount = records.filter((r) => r.kind === "payment").length;
+  assert.ok(paymentCount > 12);
+  assert.equal(unit.recent_payments.length, paymentCount, "all payments retained");
+  assert.equal(unit.last_payment?.reference, "100");
 });
 
 test("parseTransactionStream recognizes payments with 1-2 digit check refs", () => {

@@ -17,14 +17,14 @@ This repo now sends **money out and deposits** as well as tenant ledger events �
 
 Two things worth knowing before you dig: **move-out is a refund cheque**, not a status field — it has been searched for twice and not found; see [`docs/LH_GL_FILE_FORMAT.md`](./docs/LH_GL_FILE_FORMAT.md) §6.5 for the four tenancy markers. And **Leasehold erases a tenant's history at move-out** (§6.6), which is why running this bridge continuously is urgent rather than convenient.
 
-**Known gap:** `summarizeTransactionsByUnit` caps at the last **12 payments / 80 records per unit**. Harmless on a frequent sync; a catch-up run after an outage silently drops the oldest. Fix before continuous sync.
+**Fixed 2026-08-07:** `summarizeTransactionsByUnit` no longer caps at 12 payments / 80 rows — full per-unit history is exported; delta cursor keeps all ledger keys (was 120).
 
 ---
 
 ## Start here (mandatory)
 
 1. **`../propera-app/docs/OFFICE_AGENT_HANDOFF.md`** — **current state, pull commands, verify SQL, what's shipped, what's next.** Read this before changing bridge or sync logic.
-2. **`../PROPERA_LH_STRICT_ACTOR_PATHS.md`** — **finance thread (2026-07-31):** strict LH actor, path matrix, baseline vs forward. Stream 2 (`A*TR` checks) not wired yet; tenant Stream 1 mostly done. **Next: T7 allocation replay** (propera-v2/app — no bridge change).
+2. **`../PROPERA_LH_STRICT_ACTOR_PATHS.md`** — **finance thread (2026-07-31):** strict LH actor, path matrix, baseline vs forward. Stream 2 (`A*TR` checks) not wired yet; tenant Stream 1 mostly done. Bridge 12/80 export cap **fixed 2026-08-07**.
 3. **`../propera-app/docs/WESTFIELD_TENANT_NAMES_AND_REPORTS.md`** — **2026-06-25:** parser name fix, PDF reports, roster vs leaseholder, office verify steps.
 4. **`../propera-app/docs/LEASEHOLD_BRIDGE_ACTION_MODEL.md`** — locked intent: bridge = actor, baseline + deltas, silence ≠ deletion.
 5. **`../propera-v2/docs/ACCOUNTING_SIGNAL_SCHEMA.md`** — signal shapes (when D: or GitHub available).

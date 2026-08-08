@@ -26,6 +26,6 @@ test("deposit formula holds for every unit on every import-enabled property", ()
   }
 
   assert.equal(failures.length, 0, `deposit formula failures: ${failures.join(", ")}`);
-  assert.equal(totalUnits, 285);
+  assert.ok(totalUnits >= 285, `expected >= 285 units, got ${totalUnits}`);
   assert.equal(enabled.length, 5);
 });

@@ -43,21 +43,22 @@ test("ledger chain math holds for every unit on every enabled property", () => {
   }
 
   assert.equal(failures.length, 0, `chain failures: ${failures.join(", ")}`);
-  assert.equal(totalUnits, 285);
+  // Unit count follows the live mirror catalog (grows when LH adds units).
+  assert.ok(totalUnits >= 285, `expected >= 285 units, got ${totalUnits}`);
 });
 
-test("Morris unit 208 ADJ and tail payments reconcile", () => {
+test("Morris unit 208 ADJ and full posted history reconcile", () => {
   const mapping = loadPropertyMapping();
   const result = exportPropertySnapshots({
     mapping,
     properaPropertyCode: "MORRIS",
-    syncedAt: "2026-06-07T12:00:00.000Z",
+    syncedAt: "2026-08-07T12:00:00.000Z",
   });
   const unit208 = result.facts.find((f) => f.unit_label === "208");
   assert.ok(unit208);
-  assert.equal(unit208.balance_cents, 211997);
 
   const posted = unit208.payload.posted_transactions;
+  assert.ok(posted.length > 80, "full history exceeds the old 80-row export cap");
   const adj = posted.find((row) => row.date === "2026-06-01" && row.description === "ADJ");
   assert.ok(adj);
   assert.equal(adj.kind, "adjustment");
@@ -67,5 +68,5 @@ test("Morris unit 208 ADJ and tail payments reconcile", () => {
   const report = validateUnitLedgerMath(posted, unit208.balance_cents);
   assert.equal(report.ok, true);
   assert.equal(report.stampMismatches, 0);
-  assert.equal(report.finalCents, 211997);
+  assert.equal(report.finalCents, unit208.balance_cents);
 });
